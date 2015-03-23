@@ -1,0 +1,79 @@
+#!/usr/bin/python
+#
+# Name:     Global SSH socket server
+# Description:  help connect ssh between client via return public ip and ramdom port.
+#               use socket.
+# project 2
+# Server:   amazon server
+#
+# Author:   Nguyen Thanh Hiep - Nguyen Huu Dinh
+# Time:     2015/03
+# Requirements:  requirements.txt
+#
+
+import sys, socket, json, random, hashlib, struct, thread
+import logging.handlers, logging
+from gshs import Request
+from gshs import JsonSocket
+
+request	= Request()
+sk 	= JsonSocket()
+
+LOG_FILENAME = "/var/log/gshs.log"
+LOG_LEVEL = logging.INFO  # Could be e.g. "DEBUG" or "WARNING"
+
+
+# Make a class we can use to capture stdout and sterr in the log
+class MyLogger(object):
+	def __init__(self, logger, level):
+		"""Needs a logger and a logger level."""
+		self.logger = logger
+		self.level = level
+ 
+	def write(self, message):
+		# Only log if there is a message (not just a new line)
+		if message.rstrip() != "":
+			self.logger.log(self.level, message.rstrip())
+ 
+
+def process(connection):
+	conn 	= JsonSocket(connection)
+	data	= conn.read_obj()
+
+	question, keep, close	= request.get_request(data)
+	if keep:
+		response 	= getattr(request, question)(data, conn)
+	else:
+		response 	= getattr(request, question)(data)
+	conn.send_obj(response)
+	if not keep:
+		conn.close()
+	if close:
+		conn.close()
+def main():
+	print "server is running..."
+	while True:
+		connection 	= sk.accept_connection()
+		thread.start_new_thread(process, (connection,))
+
+if __name__ == "__main__":
+	"""
+	logger = logging.getLogger(__name__)
+	# Set the log level to LOG_LEVEL
+	logger.setLevel(LOG_LEVEL)
+	# Make a handler that writes to a file, making a new file at midnight and keeping 3 backups
+	handler = logging.handlers.TimedRotatingFileHandler(LOG_FILENAME, when="midnight", backupCount=3)
+	# Format each log message like this
+	formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+	# Attach the formatter to the handler
+	handler.setFormatter(formatter)
+	# Attach the handler to the logger
+	logger.addHandler(handler)
+
+		# Replace stdout with logging to file at INFO level
+	sys.stdout = MyLogger(logger, logging.INFO)
+	# Replace stderr with logging to file at ERROR level
+	sys.stderr = MyLogger(logger, logging.ERROR)
+	"""
+	# run main script
+	main()
