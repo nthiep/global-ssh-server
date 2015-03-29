@@ -8,13 +8,29 @@ class Response(object):
 	"""this is class Networks, use to view other machine"""
 	def __init__(self):
 		pass
-	def listmachine(self, usermac, netmac):
+
+	def false(self):
+		return {"response": False}
+	def true(self):
+		return {"response": True}
+	def login(self, token):
+		""" response login status """
+		rs = {"response": True, "token": token}
+		return rs
+	def listmachine(self, lsmachine):
 		""" response list machine of user and Networks """
-		if usermac:
-			if len(usermac) == 0:
-				usermac = False
-		if netmac:
-			if len(netmac) == 0:
-				netmac = False
-		rs = {"response": True, "usermac": usermac, "netmac": netmac}
+		if len(lsmachine) == 0:
+			response = False
+		else:
+			response = True
+		rs = {"response": response, "machine": lsmachine}
+		return rs
+	def connect(self, lsmachine):
+		""" response list mac if same hostname """
+		rs = {"response": True, "choice": True, "machine": lsmachine}
+		return rs
+
+	def accept_connect(self, session, laddr, lport, addr, port, external, work):
+		rs = {"response": True, "choice": False, "session": session, "lport" : lport,
+		"laddr": laddr, "port": port, "addr": addr, "external": external, "work": work}
 		return rs

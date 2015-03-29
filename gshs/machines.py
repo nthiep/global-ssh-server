@@ -40,6 +40,23 @@ class Machines(object):
 		remove machine
 		"""
 		getattr(self, "_%s_remove" %self.datatype)(mac)
+	def removeall(self):
+		"""
+		remove all machine
+		"""
+		getattr(self, "_%s_removeall" %self.datatype)()
+
+	def editnat(self, mac, nat):
+		""" edit nat of machine  """
+		getattr(self, "_%s_editnat" %self.datatype)(mac, nat)
+
+	def _mongo_editnat(self, mac, nat):
+
+		if self._mongo_checkmachine(mac):
+			self.data.machines.update({"mac" : mac}, {"$set":{"nat": nat}})
+			return True
+		return False
+
 
 	def _mongo_listhost(self, lsmac, host):
 		"""
@@ -78,3 +95,6 @@ class Machines(object):
 	def _mongo_remove(self, mac):
 		""" remove machine """
 		self.data.machines.remove({"mac": mac})
+	def _mongo_removeall(self):
+		""" remove all machine """
+		self.data.machines.remove({})

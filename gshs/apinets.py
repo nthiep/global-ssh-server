@@ -34,7 +34,11 @@ class APInets(object):
 	def removenet(self, netid):
 		""" remove all machine of network """
 		return getattr(self, "_%s_removenet" %self.datatype)(netid)
-
+	def removeall(self):
+		"""
+		remove all
+		"""
+		return getattr(self, "_%s_removeall" %self.datatype)()
 	def _mongo_renetmac(self, mac, netid):
 		""" same remove network by mongo database """
 		self.data.apinets.remove({"mac": mac, "netid": netid})	
@@ -75,3 +79,6 @@ class APInets(object):
 	def _mongo_removemac(self, mac):
 		""" remove all network of machine """
 		self.data.apinets.remove({"mac": mac})
+	def _mongo_removeall(self):
+		""" remove all """
+		self.data.apinets.remove({})

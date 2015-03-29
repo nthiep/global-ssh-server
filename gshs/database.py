@@ -3,36 +3,17 @@
 # Name:			database
 # Description:	database
 #
-from os.path import join
 import pymongo
 import os, datetime
-from pymongo import Connection
-from ConfigParser import SafeConfigParser
-
-# option value
-__CONFIG_FILE__ = "/etc/gshs/gshs.conf"
-
-__DATA_SECTION__ = 'DataBase'
-
-# seting if use mongobd
-__URL_MONGO__  = 'UrlMongo'
-__HOST_MONGO__ = 'HostMongo'
-__PORT_MONGO__ = 'PortMongo'
-
-# seting if use mysql database
-__HOST_MYSQL__ = 'HostMysql'
-__USER_MYSQL__ = 'UserMysql'
-__PASS_MYSQL__ = 'PassMysql'
-
-# database name
-
-__DATA_NAME__ = 'DataName'
-
+from gshs.config 	import *
+from os.path 		import join
+from pymongo 		import Connection
+from ConfigParser 	import ConfigParser
 
 class Database(object):
 	def __init__(self):
-		self.parser = SafeConfigParser()
-		self.parser.read(__CONFIG_FILE__)
+		self.parser = ConfigParser()
+		self.parser.read(CONFIG_FILE)
 		self.database = None
 
 	def connect(self):
@@ -51,30 +32,30 @@ class Database(object):
 		"""
 		check config mongodb server has enable
 			"""
-		return parser.has_option(__DATA_SECTION__, __URL_MONGO__) or (parser.has_option(__DATA_SECTION__, __HOST_MONGO__) and  parser.has_option(__DATA_SECTION__, __PORT_MONGO__))
+		return parser.has_option(DATA_SECTION, URL_MONGO) or (parser.has_option(DATA_SECTION, HOST_MONGO) and  parser.has_option(DATA_SECTION, PORT_MONGO))
 	def __check_mysql_server(self, parser):
 		"""
 		check config mysql server has enable
 		"""
-		return parser.has_option(__DATA_SECTION__, __HOST_MYSQL__) and  parser.has_option(__DATA_SECTION__, __PORT_MYSQL__)
+		return parser.has_option(DATA_SECTION, HOST_MYSQL) and  parser.has_option(DATA_SECTION, PORT_MYSQL)
 	def __conn_mongo(self, parser):
 		"""
 		check Connection to mongo database
 		"""
 		try:
-			conn = Connection(parser.get(__DATA_SECTION__, __URL_MONGO__))
+			conn = Connection(parser.get(DATA_SECTION, URL_MONGO))
 		except:
 			try:
-				conn = Connection(parser.get(__DATA_SECTION__, __HOST_MONGO__), parser.get(__DATA_SECTION__, __PORT_MONGO__))
+				conn = Connection(parser.get(DATA_SECTION, HOST_MONGO), parser.get(DATA_SECTION, PORT_MONGO))
 			except:
 				return False
-		return getattr(conn, parser.get(__DATA_SECTION__,__DATA_NAME__))
+		return getattr(conn, parser.get(DATA_SECTION,DATA_NAME))
 	def __conn_mysql(self, parser):
 		"""
 		check Connection to mysql database
 		"""
 		try:
-			conn = MySQLdb.connect(parser.get(__CONFIG_FILE__, __HOST_MYSQL__), parser.get(__CONFIG_FILE__, __USER_MYSQL__), parser.get(__CONFIG_FILE__, __PASS_MYSQL__), parser.get(__CONFIG_FILE__, __DATA_NAME__))
+			conn = MySQLdb.connect(parser.get(CONFIG_FILE, HOST_MYSQL), parser.get(CONFIG_FILE, USER_MYSQL), parser.get(CONFIG_FILE, PASS_MYSQL), parser.get(CONFIG_FILE, DATA_NAME))
 		except:
 			return False
 		return conn

@@ -7,31 +7,26 @@
 	Thank author!
 """
 import socket, struct, json, time
-
-from ConfigParser import SafeConfigParser
-
-__CONFIG_FILE__ = "/etc/gshs/gshs.conf"
-__SV_SECTION__  = 'Server'
-__SV_PORT__ 	= 'Port'
-__SV_TIME__		= 'Timeout'
+from gshs.config import *
 class JsonSocket(object):
-	def __init__(self, sk = None):
-		parser 			= SafeConfigParser()
-		parser.read(__CONFIG_FILE__)
-		if sk is None:
+	def __init__(self, sock = None):
+		if sock is None:
 			self.socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-			self.port 	= int(parser.get(__SV_SECTION__, __SV_PORT__))
+			self.port 	= SERVER_PORT
 			self._bind()
 			self._listen()
 		else:
-			self.socket = sk
-		self._timeout 	= int(parser.get(__SV_SECTION__, __SV_TIME__))
+			self.socket = sock
+		self._timeout 	= SERVER_TIMEOUT
 
-
+	def get_conn(self):
+		return self.socket
 	def send_obj(self, obj):
 		msg = json.dumps(obj)
 		if self.socket:
 			self.socket.send(msg)
+	def send(self, msg):
+		self.socket.send(msg)
 
 	def gethostname(self):
 		return socket.gethostname()

@@ -18,11 +18,11 @@ class APIusers(object):
 		"""
 		return getattr(self, "_%s_getuser" %self.datatype)(key)
 
-	def addapikey(self, username, mac, key):
+	def addapimac(self, username, mac):
 		"""
-		add key to database
+		add machine to user
 		"""
-		return getattr(self, "_%s_addapi" %self.datatype)(username, mac, key)
+		return getattr(self, "_%s_addapimac" %self.datatype)(username, mac)
 
 	def checkapi(self, mac, key):
 		return getattr(self, "_%s_checkapi" %self.datatype)(mac, key)
@@ -30,7 +30,11 @@ class APIusers(object):
 	def listmac(self, username):
 		""" return all machine of username """
 		return getattr(self, "_%s_listmac" %self.datatype)(username)
-		
+	def removemac(self, mac):
+		"""
+		remove machine of user
+		"""
+		return getattr(self, "_%s_removemac" %self.datatype)(mac)
 	def _mongo_listmac(self, username):
 		""" output all list machine of username """
 		ls = self.data.apiusers.find({"username": username}, {"mac": 1})
@@ -58,13 +62,15 @@ class APIusers(object):
 		if self.data.apiusers.find_one({ "mac" : mac}):
 			return True
 		return False
-	def _mongo_addapi(self, username, mac, key):
+	def _mongo_addapimac(self, username, mac):
 		"""
 		add api key to mongo Database
 		"""
 		if self._mongo_checkmac(mac):
-			self.data.apiusers.update({"mac" : mac}, {"$set": {"username": username, "key": key}})
+			self.data.apiusers.update({"mac" : mac}, {"$set": {"username": username}})
 		else:
-			self.data.apiusers.insert({"username": username, "mac": mac, "key": key})
+			self.data.apiusers.insert({"username": username, "mac": mac})
 		return True
-
+	def _mongo_removemac(self, mac):
+		""" remove machine of user """
+		self.data.apiusers.remove({"mac": mac})
