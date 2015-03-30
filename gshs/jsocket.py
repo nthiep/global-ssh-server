@@ -3,9 +3,8 @@
 	Contains JsonSocket json object message passing for client.
 
 	This file is part of the jsocket package.
-	Copyright (C) 2011 by Christopher Piekarski <chris@cpiekarski.com>
-	Thank author!
 """
+
 import socket, struct, json, time
 from gshs.config import *
 class JsonSocket(object):

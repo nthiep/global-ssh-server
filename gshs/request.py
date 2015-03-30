@@ -256,8 +256,12 @@ class Request(object):
 
 		if natb == 'D':
 			return _direct, _lssv
+		"""
 		if nata == 'D':
 			return _listen, _revers
+		"""
+
+		
 		if nata == 'F':
 			if natb == 'F':
 				return _hole, _hole
@@ -387,30 +391,34 @@ class Request(object):
 			pass
 	def _check_session(self, session):
 		try:
-			self.session[ss]
+			self.session[session]
 			return True
 		except:
 			pass
 		return False 
 	def relay(self, data, connection):
-		ss = data["session"]
-		if self._check_session(ss):
-			thread.start_new_thread(self._relay_forward, (connection.get_conn(), self.session[ss]))			
-			thread.start_new_thread(self._relay_forward, (self.session[ss], connection.get_conn()))
-			del self.session[ss]
+		ses = data["session"]
+		if self._check_session(ses):
+			print "have session"
+			thread.start_new_thread(self._relay_forward, (ses, connection.get_conn(), self.session[ses]))			
+			thread.start_new_thread(self._relay_forward, (ses, self.session[ses], connection.get_conn()))
+			del self.session[ses]
+			print "start thread relay"
 		else:
-			self.session[ss] = connection.get_conn()
+			print "add session relay"
+			self.session[ses] = connection.get_conn()
+		return True
 	def udp_hole(self, data, connection):
-		ss = data["session"]
-		if self._check_session(ss):
-			port = self.session[ss]
-			del self.session[ss]
+		ses = data["session"]
+		if self._check_session(ses):
+			port = self.session[ses]
+			del self.session[ses]
 			return port
 		else:
 			udp = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 			udp.bind(("", 0))
 			addr, port = udp.getsockname()
-			self.session[ss] = port
+			self.session[ses] = port
 			thread.start_new_thread(self.udp_connect, (session, udp))
 			return port
 
