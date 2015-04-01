@@ -18,7 +18,7 @@ from gshs import JsonSocket
 from gshs.config import *
 request	= Request()
 sock 	= JsonSocket()
-
+sock.set_server()
 LOG_LEVEL = logging.INFO  # Could be e.g. "DEBUG" or "WARNING"
 
 
@@ -36,22 +36,18 @@ class MyLogger(object):
  
 
 def process(connection):
-	conn 	= JsonSocket(connection)
+	conn 	= JsonSocket()
+	conn.set_socket(connection)
 	data	= conn.read_obj()
-	print data
-	question, keep, close	= request.get_request(data)
-	if keep:
+	question, getconnect	= request.get_request(data)
+	print "%s with request %s" %(str(conn.getpeername()), question)
+	if getconnect:
 		response 	= getattr(request, question)(data, conn)
 	else:
 		response 	= getattr(request, question)(data)
-	try:
+	if response:
 		conn.send_obj(response)
-	except:
-		pass
-	print response
-	if not keep:
-		conn.close()
-	if close:
+	if not getconnect:
 		conn.close()
 def main():
 	print "server is running..."

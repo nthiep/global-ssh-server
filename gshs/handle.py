@@ -23,6 +23,7 @@ class Handle(Thread):
 		super(Handle, self).__init__()
 		self.daemon 	= True
 		self.connection = connection
+		self.connection.set_timeout()
 		self.mac 		= mac
 		self.listpeer 	= listpeer
 	def remove_peer(self):

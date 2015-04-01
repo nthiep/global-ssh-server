@@ -4,7 +4,7 @@
 # Description:	request class object
 #
 
-import json, hashlib, random, time, thread
+import socket, json, hashlib, random, time, thread
 from gshs 	import Database
 from gshs 	import Users
 from gshs 	import Machines
@@ -14,6 +14,7 @@ from gshs 	import Networks
 from gshs  	import Handle
 from gshs	import Response
 from gshs	import Sessions
+from gshs 	import JsonSocket
 from bson	import json_util
 
 class peer_mac(object):
@@ -64,14 +65,11 @@ class Request(object):
 		"""
 		return to request type of user
 		"""
-		keep  = False
-		close = False
+		getconnect = False
 		if data["request"] in ['keepconnect', 'connect', 'accept_connect',
 			 'checknat', 'relay', 'udp_hole']:
-			keep = True
-			if data["request"] in [ 'accept_connect', 'connect', 'checknat', 'udp_hole']:
-				close = True
-		return data["request"], keep, close
+			getconnect = True
+		return data["request"], getconnect
 
 	def keepconnect(self, data, connection):
 		mac 	 = data["mac"]
@@ -102,7 +100,7 @@ class Request(object):
 		if user.checkauth(username, pswd):
 			apikey = user.getapikey(username)
 			return self.response.login(apikey)
-		return False
+		return self.response.false()
 
 	def register(self, data):
 		"""
@@ -116,8 +114,9 @@ class Request(object):
 		apikey 	 = self.createtoken()
 		user = Users(self.database, self.datatype)
 		pswd = hashlib.sha1(passwork).hexdigest()
-		return user.adduser(username, pswd, fullname, email, website, apikey)
-
+		if user.adduser(username, pswd, fullname, email, website, apikey):
+			return self.response.true()
+		return self.response.false()
 
 	def authuser(self, data):
 		""" authentication of api key user """
@@ -128,12 +127,11 @@ class Request(object):
 			apiuser  = APIusers(self.database, self.datatype)
 			username = user.getuser(apikey)
 			apiuser.addapimac(username, mac)
-			return True
-		return False
+			return self.response.true()
+		return self.response.false()
 
 	def authnetwork(self, data):
 		""" request of add network """
-		print data
 		netkey  	= data["netkey"]
 		mac 		= data["mac"]
 		nw 			= Networks(self.database, self.datatype)
@@ -191,6 +189,8 @@ class Request(object):
 					nw.removenet(k[:24])
 				else:
 					apin.renetmac(mac, k[:24])
+				return self.response.true()
+		return self.response.false()
 
 	def _connect_process(self, mac, macpeer, data, connection):
 		ss = self.createtoken()
@@ -220,7 +220,7 @@ class Request(object):
 			if macpeer:
 				if macpeer in lsmac:
 					self._connect_process(mac, macpeer, data, connection)
-					return True
+					return False
 			else:	
 				machine	 = Machines(self.database, self.datatype)	
 				lsmachine   = list(machine.listhost(lsmac, peer))
@@ -260,7 +260,9 @@ class Request(object):
 		if nata == 'D':
 			return _listen, _revers
 		"""
-
+		#this is a test
+		if nata == 'D':
+			return _uhole, _uhole
 		
 		if nata == 'F':
 			if natb == 'F':
@@ -304,25 +306,24 @@ class Request(object):
 			q = self.response.accept_connect(data["session"], peer["laddr"],
 				peer["lport"], peer["addr"], peer["port"], addr, workb)
 			connp.send_obj(p)
+			connection.send_obj(q)
 			connp.close()
+			connection.close()
 			del self.session[data["session"]]
-			return q
 		return False
 
 	def checknat_listen(self, connection):
-		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		sock.settimeout(5.0)
-		sock.bind(("", 0))
-		addr, port = sock.getsockname()
-		send_obj	= {"check": True, "port": port}
-		connection.send(json.dumps(send_obj))
+		sock 	= JsonSocket()
+		port = sock.set_port()
+		sock.set_timeout()
+		send_obj	= self.response.checknat(True, port)
+		connection.send_obj(send_obj)
 		connection.close()
-		sock.listen(5)
-		conn, addr = sock.accept()
-		data = conn.recv(1024)
-		sock.close()
-		data = json.dumps(data)
-		return conn, addr, data
+		conn = sock.accept_connection()
+		s = JsonSocket()
+		conn = s.set_socket(conn)
+		
+		return conn
 
 	def checknat_function(self, connection, laddr, lport, addr, port):
 		if addr == laddr:
@@ -335,8 +336,8 @@ class Request(object):
 				_asc 	= 0
 				_desc 	= 0
 				while i < 3:
-					connection, naddr, ndata = self.checknat_listen(connection)
-					ad, nport = naddr
+					connection = self.checknat_listen(connection, i)
+					ad, nport = connection.getpeername()
 					ab = nport - port
 					if abs(ab) > 10:
 						return 'S', connection
@@ -363,12 +364,11 @@ class Request(object):
 		addr, port = connection.getpeername()
 		machine	   = Machines(self.database, self.datatype)
 		if machine.checkmachine(mac):
-			nat, connection = self.checknat_function(connection, laddr, lport, addr, port)
-			send_obj		= {"check": False}
-			connection.send(json.dumps(send_obj))
+			nat, connection = self.checknat_function(connection, laddr, lport, addr, port)			
+			machine.editnat(mac, nat)
+			send_obj = self.response.checknat(False)
+			connection.send_obj(send_obj)
 			connection.close()
-			if machine.editnat(mac, nat):
-				return True
 		return False
 
 	def _relay_forward(self, session, source, destination):
@@ -400,27 +400,31 @@ class Request(object):
 		ses = data["session"]
 		if self._check_session(ses):
 			print "have session"
-			thread.start_new_thread(self._relay_forward, (ses, connection.get_conn(), self.session[ses]))			
-			thread.start_new_thread(self._relay_forward, (ses, self.session[ses], connection.get_conn()))
+			conna = connection.get_conn()
+			connb = self.session[ses]
+			conna.settimeout(None)
+			connb.settimeout(None)
+			thread.start_new_thread(self._relay_forward, (ses, conna, connb))			
+			thread.start_new_thread(self._relay_forward, (ses, connb, conna))
 			del self.session[ses]
 			print "start thread relay"
 		else:
 			print "add session relay"
 			self.session[ses] = connection.get_conn()
-		return True
+		return False
 	def udp_hole(self, data, connection):
 		ses = data["session"]
 		if self._check_session(ses):
 			port = self.session[ses]
 			del self.session[ses]
-			return port
+			return self.response.portudp(port)
 		else:
 			udp = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 			udp.bind(("", 0))
 			addr, port = udp.getsockname()
 			self.session[ses] = port
-			thread.start_new_thread(self.udp_connect, (session, udp))
-			return port
+			thread.start_new_thread(self.udp_connect, (ses, udp))
+			return self.response.portudp(port)
 
 	def udp_connect(self, session, udp):
 		ses = Sessions(self.database, self.datatype)

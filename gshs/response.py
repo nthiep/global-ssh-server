@@ -25,11 +25,16 @@ class Response(object):
 			response = True
 		rs = {"response": response, "machine": lsmachine}
 		return rs
+	def checknat(self, check, port = None):
+		rs = {"response": True, "check": check, "port": port}
+		return rs
 	def connect(self, lsmachine):
 		""" response list mac if same hostname """
 		rs = {"response": True, "choice": True, "machine": lsmachine}
 		return rs
-
+	def portudp(self, port):
+		rs = {"response": True, "port": port}
+		return rs
 	def accept_connect(self, session, laddr, lport, addr, port, external, work):
 		rs = {"response": True, "choice": False, "session": session, "lport" : lport,
 		"laddr": laddr, "port": port, "addr": addr, "external": external, "work": work}
