@@ -17,7 +17,7 @@ from gshs import Request
 from gshs import JsonSocket
 from gshs.config import *
 request	= Request()
-sock 	= JsonSocket()
+sock 	= JsonSocket(JsonSocket.TCP)
 sock.set_server()
 LOG_LEVEL = logging.INFO  # Could be e.g. "DEBUG" or "WARNING"
 
@@ -36,7 +36,7 @@ class MyLogger(object):
  
 
 def process(connection):
-	conn 	= JsonSocket()
+	conn 	= JsonSocket(JsonSocket.TCP)
 	conn.set_socket(connection)
 	data	= conn.read_obj()
 	question, getconnect	= request.get_request(data)

@@ -46,14 +46,14 @@ class Machines(object):
 		"""
 		getattr(self, "_%s_removeall" %self.datatype)()
 
-	def editnat(self, mac, nat):
+	def editnat(self, mac, nat, issym):
 		""" edit nat of machine  """
-		getattr(self, "_%s_editnat" %self.datatype)(mac, nat)
+		getattr(self, "_%s_editnat" %self.datatype)(mac, nat, issym)
 
-	def _mongo_editnat(self, mac, nat):
+	def _mongo_editnat(self, mac, nat, issym):
 
 		if self._mongo_checkmachine(mac):
-			self.data.machines.update({"mac" : mac}, {"$set":{"nat": nat}})
+			self.data.machines.update({"mac" : mac}, {"$set":{"nat": nat, "issym": issym}})
 			return True
 		return False
 

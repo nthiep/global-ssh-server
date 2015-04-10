@@ -230,7 +230,7 @@ class Request(object):
 					return self.response.connect(lsmachine)
 		return self.response.false()
 
-	def connect_response(self, nata, natb):
+	def connect_response(self, nata, natb, syma, symb):
 		""" response type of connect """
 		_direct 	= "DRT"		#for a: connect direct when b on the internet
 		_lssv 		= "LSV"		#for b: listen on port if ssh port change
@@ -282,9 +282,13 @@ class Request(object):
 			if natb == 'A' or natb == 'DA':
 				return _uhole
 			if natb == 'S':
+				if not syma or not symb:
+					return _uhole, _uhole
 				return _relay, _relay
 		if nata == 'S':
 			if natb == 'F':
+				return _uhole, _uhole
+			if not syma or not symb:
 				return _uhole, _uhole
 			return _relay, _relay
 
@@ -297,8 +301,11 @@ class Request(object):
 			mc 	 = machine.getmachine(data["mac"])
 			peer = ses.getsession(data["session"])
 			nata = peer["nat"]
+			syma = peer["issym"]
 			natb = mc["nat"]
-			worka, workb = self.connect_response(nata, natb)
+			symb = mc["issym"]
+
+			worka, workb = self.connect_response(nata, natb, syma, symb)
 			connp = self.session[data["session"]]
 			addr, port = connection.getpeername()
 			p = self.response.accept_connect(data["session"], data["laddr"],
@@ -311,36 +318,44 @@ class Request(object):
 			connection.close()
 			del self.session[data["session"]]
 		return False
-
-	def checknat_listen(self, connection):
-		sock 	= JsonSocket()
-		port = sock.set_port()
-		sock.set_timeout()
-		send_obj	= self.response.checknat(True, port)
+	def checknat_symmetric(self, connection):
+		sock = JsonSocket(JsonSocket.UDP)
+		port = sock.set_server(0)
+		send_obj	= self.response.checknat(True, port, True)	
 		connection.send_obj(send_obj)
 		connection.close()
-		conn = sock.accept_connection()
-		s = JsonSocket()
+		conn = sock.read_obj()
 		conn = s.set_socket(conn)
-		
 		return conn
+	def checknat_listen(self, connection):
+		sock 	= JsonSocket(JsonSocket.TCP)
+		port = sock.set_server(0)
+		sock.set_timeout()
+		send_obj	= self.response.checknat(True, port)
+		connection[0].send_obj(send_obj)
+		connection[0].close()
+		conn = sock.accept_connection()
+		s = JsonSocket(JsonSocket.TCP)
+		conn = s.set_socket(conn)
+		connection[0]= conn
+		return connection
 
 	def checknat_function(self, connection, laddr, lport, addr, port):
 		if addr == laddr:
-			return 'D', connection
+			return 'D'
 		else:
 			if lport == port:
-				return 'F', connection
+				return 'F'
 			else:
 				_i 		= 0
 				_asc 	= 0
 				_desc 	= 0
-				while i < 3:
-					connection = self.checknat_listen(connection, i)
-					ad, nport = connection.getpeername()
+				while _i < 3:
+					connection = self.checknat_listen(connection)
+					ad, nport = connection[0].getpeername()
 					ab = nport - port
 					if abs(ab) > 10:
-						return 'S', connection
+						return 'S'
 						break
 					else:
 						if ab > 0:
@@ -348,13 +363,13 @@ class Request(object):
 						else:
 							_desc +=1
 						port = nport
-						_i +=1
+						_i +=1				
 				if _asc >0 and _desc >0:
-					return 'S', connection
+					return 'S'
 				if _asc:
-					return 'A', connection
+					return 'A'
 				else:
-					return 'DA', connection
+					return 'DA'
 	def checknat(self, data, connection):
 		""" check machine nat type """
 		mac 	= data["mac"]
@@ -364,11 +379,24 @@ class Request(object):
 		addr, port = connection.getpeername()
 		machine	   = Machines(self.database, self.datatype)
 		if machine.checkmachine(mac):
-			nat, connection = self.checknat_function(connection, laddr, lport, addr, port)			
-			machine.editnat(mac, nat)
+			conn = []
+			conn.append(connection)
+			_issym = False
+			_conn = conn[0]
+			nat = self.checknat_function(conn, laddr, lport, addr, port)
+			if nat in ['S', 'A', 'DA']:
+				_i = 0
+				_sport = False
+				while _i < 3:
+					_conn = self.checknat_symmetric(_conn)
+					ad, po = _conn.getpeername()
+					if _sport and po != _sport:
+						_issym = True
+						break
+			machine.editnat(mac, nat, _issym)
 			send_obj = self.response.checknat(False)
-			connection.send_obj(send_obj)
-			connection.close()
+			_conn.send_obj(send_obj)
+			_conn.close()
 		return False
 
 	def _relay_forward(self, session, source, destination):

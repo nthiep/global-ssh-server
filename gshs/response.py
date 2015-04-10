@@ -25,8 +25,8 @@ class Response(object):
 			response = True
 		rs = {"response": response, "machine": lsmachine}
 		return rs
-	def checknat(self, check, port = None):
-		rs = {"response": True, "check": check, "port": port}
+	def checknat(self, check, port = None, isudp = False):
+		rs = {"response": True, "check": check, "port": port, "isudp" : isudp}
 		return rs
 	def connect(self, lsmachine):
 		""" response list mac if same hostname """
