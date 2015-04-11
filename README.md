@@ -1,7 +1,7 @@
-Global-SSH
+Global-SSH-Server
 ==========
 
-Description: Global-SSH webservice, application help connect SSH to computer via p2p network, use hole punching create TCP connect and use for SSH
+Description: Global-SSH server is help client connect.
 
 Our team: Nguyen Thanh Hiep and Nguyen Huu Dinh
 
