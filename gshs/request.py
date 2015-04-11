@@ -54,7 +54,9 @@ class Request(object):
 		try:
 			conn = Database()
 			self.database = conn.connect()
-			self.datatype = conn.database
+			if not self.database:
+				raise Exception("Database Error: not database config")
+			self.datatype = conn.datatype
 		except Exception, e:
 			print e
 			raise Exception("Database Error: can connect to database")
@@ -95,7 +97,7 @@ class Request(object):
 		username = data["username"]
 		passwork = data["passwork"]
 		mac 	 = data["mac"]
-		user = Users(self.database, self.datatype)		
+		user = Users(self.database, self.datatype)	
 		pswd = hashlib.sha1(passwork).hexdigest()
 		if user.checkauth(username, pswd):
 			apikey = user.getapikey(username)
@@ -199,7 +201,7 @@ class Request(object):
 		addr, port = connection.getpeername()
 		machine	 = Machines(self.database, self.datatype)
 		peer = machine.getmachine(mac)
-		ses.addsession(ss, data["laddr"], data["lport"], addr, port, peer["nat"])
+		ses.addsession(ss, data["laddr"], data["lport"], addr, port, peer["nat"], peer["issym"])
 		connp = self.listpeer.getconnect(macpeer)
 		if not connp:
 			return
@@ -447,9 +449,8 @@ class Request(object):
 			del self.session[ses]
 			return self.response.portudp(port)
 		else:
-			udp = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
-			udp.bind(("", 0))
-			addr, port = udp.getsockname()
+			udp = JsonSocket(JsonSocket.UDP)
+			port = udp.set_server(0)
 			self.session[ses] = port
 			thread.start_new_thread(self.udp_connect, (ses, udp))
 			return self.response.portudp(port)
@@ -457,10 +458,10 @@ class Request(object):
 	def udp_connect(self, session, udp):
 		ses = Sessions(self.database, self.datatype)
 		while True:
-			data, addr = udp.recvfrom(1024)
+			data = udp.read_obj()
+			addr = udp.getpeername()
 			print "connection from udp  %s:%d" % addr 
 			try:
-				data = json.loads(data)
 				session = data["session"]
 				host, port = addr
 
@@ -468,8 +469,8 @@ class Request(object):
 				if not peer:
 					ses.addudpsession(session, host, port)
 				else:
-					udp.sendto(json.dumps({"host": host, "port": port}), (peer["addr"], int(peer["port"])))
-					udp.sendto(json.dumps({"host": peer["addr"], "port": peer["port"]}), addr)
+					udp.send_obj({"host": host, "port": port}, (peer["addr"], int(peer["port"])))
+					udp.send_obj({"host": peer["addr"], "port": peer["port"]}, addr)
 					print "linked session %s" % session
 					break
 			except:

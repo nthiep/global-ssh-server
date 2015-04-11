@@ -79,7 +79,7 @@ class JsonSocket(object):
 	def get_conn(self):
 		return self.socket
 
-	def send_obj(self, obj):
+	def send_obj(self, obj, peer=False):
 		msg = json.dumps(obj)
 		msg = self.secure.encrypt(msg)
 		if self.socket:
@@ -87,7 +87,10 @@ class JsonSocket(object):
 				self.socket.send(msg)
 				return True
 			elif(self.peer):
-				self.socket.sendto(self.peer, msg)
+				if peer:
+					self.socket.sendto(peer, msg)
+				else:
+					self.socket.sendto(self.peer, msg)
 				return True
 		return False
 

@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 import os, sys
 from distutils.core import setup
-
+_locals = {}
+with open('gsh/_version.py') as fp:
+    exec(fp.read(), None, _locals)
+version = _locals['__version__']
 setup(name        ='gshs',
-      version     ='1.0.1',
+      version     =version,
       description ='global ssh server',
       long_description=open('README.md').read(),
       author      ='Hiep Thanh',

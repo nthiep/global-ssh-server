@@ -13,6 +13,11 @@ class Users(object):
 		get username
 		"""
 		return getattr(self, "_%s_getuser" %self.database)(apikey)
+	def userinfo(self, username):
+		"""
+		get username
+		"""
+		return getattr(self, "_%s_userinfo" %self.database)(username)
 
 	def adduser(self, username, password, fullname, email, website, apikey):
 		"""
@@ -41,6 +46,14 @@ class Users(object):
 		us = self.data.users.find_one({"apikey": apikey})
 		if us:
 			return us["username"]
+		return False
+	def _mongo_userinfo(self, username):
+		"""
+		get username for mongo Database
+		"""
+		us = self.data.users.find_one({"username": username})
+		if us:
+			return us
 		return False
 	def _mongo_checkuser(self, username):
 		"""

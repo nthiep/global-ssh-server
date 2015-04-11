@@ -1,4 +1,5 @@
 import config
+from gshs._version 	import __version__, __version_info__
 from users 		import Users
 from database 	import Database
 from machines 	import Machines

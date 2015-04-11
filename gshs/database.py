@@ -14,31 +14,31 @@ class Database(object):
 	def __init__(self):
 		self.parser = ConfigParser()
 		self.parser.read(CONFIG_FILE)
-		self.database = None
+		self.datatype = None
 
 	def connect(self):
 		"""
 		check select database to use in server
 		"""
-		if self.__check_mongo_server(self.parser) and self.__conn_mongo(self.parser):
-			self.database = 'mongo'
-			return self.__conn_mongo(self.parser)
-		if self.__check_mysql_server(self.parser) and self.__conn_mysql(self.parser):
-			self.database = 'mysql'
-			return self.__conn_mysql(self.parser)
+		if self._check_mongo_server(self.parser) and self._conn_mongo(self.parser):
+			self.datatype = 'mongo'
+			return self._conn_mongo(self.parser)
+		if self._check_mysql_server(self.parser) and self._conn_mysql(self.parser):
+			self.datatype = 'mysql'
+			return self._conn_mysql(self.parser)
 		return False
 
-	def __check_mongo_server(self, parser):
+	def _check_mongo_server(self, parser):
 		"""
 		check config mongodb server has enable
 			"""
 		return parser.has_option(DATA_SECTION, URL_MONGO) or (parser.has_option(DATA_SECTION, HOST_MONGO) and  parser.has_option(DATA_SECTION, PORT_MONGO))
-	def __check_mysql_server(self, parser):
+	def _check_mysql_server(self, parser):
 		"""
 		check config mysql server has enable
 		"""
 		return parser.has_option(DATA_SECTION, HOST_MYSQL) and  parser.has_option(DATA_SECTION, PORT_MYSQL)
-	def __conn_mongo(self, parser):
+	def _conn_mongo(self, parser):
 		"""
 		check Connection to mongo database
 		"""
@@ -50,7 +50,7 @@ class Database(object):
 			except:
 				return False
 		return getattr(conn, parser.get(DATA_SECTION,DATA_NAME))
-	def __conn_mysql(self, parser):
+	def _conn_mysql(self, parser):
 		"""
 		check Connection to mysql database
 		"""
