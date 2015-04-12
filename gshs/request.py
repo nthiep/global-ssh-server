@@ -201,7 +201,7 @@ class Request(object):
 		addr, port = connection.getpeername()
 		machine	 = Machines(self.database, self.datatype)
 		peer = machine.getmachine(mac)
-		ses.addsession(ss, data["laddr"], data["lport"], addr, port, peer["nat"], peer["issym"])
+		ses.addsession(ss, data["laddr"], data["lport"], addr, port, peer["nat"], peer["issym"], data["sport"])
 		connp = self.listpeer.getconnect(macpeer)
 		if not connp:
 			return
@@ -302,6 +302,7 @@ class Request(object):
 			machine = Machines(self.database, self.datatype)
 			mc 	 = machine.getmachine(data["mac"])
 			peer = ses.getsession(data["session"])
+			sport = peer["sport"]
 			nata = peer["nat"]
 			syma = peer["issym"]
 			natb = mc["nat"]
@@ -313,7 +314,7 @@ class Request(object):
 			p = self.response.accept_connect(data["session"], data["laddr"],
 			 	data["lport"], addr, port, peer["addr"], worka)
 			q = self.response.accept_connect(data["session"], peer["laddr"],
-				peer["lport"], peer["addr"], peer["port"], addr, workb)
+				peer["lport"], peer["addr"], peer["port"], addr, workb, sport)
 			connp.send_obj(p)
 			connection.send_obj(q)
 			connp.close()

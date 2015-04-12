@@ -35,7 +35,7 @@ class Response(object):
 	def portudp(self, port):
 		rs = {"response": True, "port": port}
 		return rs
-	def accept_connect(self, session, laddr, lport, addr, port, external, work):
+	def accept_connect(self, session, laddr, lport, addr, port, external, work, sport=False):
 		rs = {"response": True, "choice": False, "session": session, "lport" : lport,
-		"laddr": laddr, "port": port, "addr": addr, "external": external, "work": work}
+		"laddr": laddr, "port": port, "addr": addr, "external": external, "work": work, "sport": sport}
 		return rs
