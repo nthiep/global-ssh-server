@@ -17,6 +17,9 @@ class Response(object):
 		""" response login status """
 		rs = {"response": True, "token": token}
 		return rs
+	def addnetwork(self, netname):
+		rs = {"response": True, "netname": netname}
+		return rs
 	def listmachine(self, lsmachine):
 		""" response list machine of user and Networks """
 		if len(lsmachine) == 0:

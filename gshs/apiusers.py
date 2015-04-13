@@ -12,29 +12,20 @@ class APIusers(object):
 		self.data = data
 		self.datatype = datatype
 
-	def getuser(self, key):
-		"""
-		get username
-		"""
-		return getattr(self, "_%s_getuser" %self.datatype)(key)
-
 	def addapimac(self, username, mac):
 		"""
 		add machine to user
 		"""
 		return getattr(self, "_%s_addapimac" %self.datatype)(username, mac)
 
-	def checkapi(self, mac, key):
-		return getattr(self, "_%s_checkapi" %self.datatype)(mac, key)
-
 	def listmac(self, username):
 		""" return all machine of username """
 		return getattr(self, "_%s_listmac" %self.datatype)(username)
-	def removemac(self, mac):
+	def removemac(self, mac, username):
 		"""
 		remove machine of user
 		"""
-		return getattr(self, "_%s_removemac" %self.datatype)(mac)
+		return getattr(self, "_%s_removemac" %self.datatype)(mac, username)
 	def _mongo_listmac(self, username):
 		""" output all list machine of username """
 		ls = self.data.apiusers.find({"username": username}, {"mac": 1})
@@ -43,20 +34,6 @@ class APIusers(object):
 			rs.append(l["mac"])
 		return rs
 
-	def _mongo_getuser(self, key):
-		"""
-		get username for mongo Database
-		"""
-		data = self.data.apiusers.find_one({"key": key})
-		return data["username"]
-
-	def _mongo_checkapi(self, mac, key):
-		"""
-		check api key for mongo Database
-		"""
-		if self.data.apiusers.find({ "mac" : mac, "key": key }):
-			return True
-		return False
 	def _mongo_checkmac(self, mac):
 		"""check mac in api"""
 		if self.data.apiusers.find_one({ "mac" : mac}):
@@ -69,8 +46,8 @@ class APIusers(object):
 		if self._mongo_checkmac(mac):
 			self.data.apiusers.update({"mac" : mac}, {"$set": {"username": username}})
 		else:
-			self.data.apiusers.insert({"username": username, "mac": mac})
+			self.data.apiusers.insert({"mac": mac, "username": username})
 		return True
-	def _mongo_removemac(self, mac):
+	def _mongo_removemac(self, mac, username):
 		""" remove machine of user """
-		self.data.apiusers.remove({"mac": mac})
+		self.data.apiusers.remove({"mac": mac, "username": username})

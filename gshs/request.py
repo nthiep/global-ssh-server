@@ -154,6 +154,30 @@ class Request(object):
 		netid = nw.addnetwork(mac, netname, netkey)
 		return netid + netkey
 
+	def addnetwork(self, data):
+		netkey  	= data["netkey"]
+		mac 		= data["mac"]
+		nw 			= Networks(self.database, self.datatype)
+		if nw.checknetwork(netkey[:24], netkey[24:]):
+			netname = nw.getnetname(netkey[:24])
+			return self.response.addnetwork(netname)
+		return self.response.false()
+	def renetwork(self, data):
+		""" remove network of machine """
+		netkey   = data["netkey"]
+		mac 	 = data["mac"]
+		nw 		 = Networks(self.database, self.datatype)
+		apin 	 = APInets(self.database, self.datatype)
+		for k in netkey:
+			if nw.checknetwork(k[:24], k[24:]):
+				if nw.checkadmin(mac, k[:24]):
+					apin.removenet(k[:24])
+					nw.removenet(k[:24])
+				else:
+					apin.renetmac(mac, k[:24])
+				return self.response.true()
+		return self.response.false()
+
 	def _get_listmac(self, mac, apikey):
 		""" get list peer machine of mac """
 		lsmu = []
@@ -177,22 +201,6 @@ class Request(object):
 		if len(lsmac) != 0:
 			lsmachine   = list(machine.listmachine(lsmac))
 		return self.response.listmachine(lsmachine)
-
-	def renetwork(self, data):
-		""" remove network of machine """
-		netkey   = data["netkey"]
-		mac 	 = data["mac"]
-		nw 		 = Networks(self.database, self.datatype)
-		apin 	 = APInets(self.database, self.datatype)
-		for k in netkey:
-			if nw.checknetwork(k[:24], k[24:]):
-				if nw.checkadmin(mac, k[:24]):
-					apin.removenet(k[:24])
-					nw.removenet(k[:24])
-				else:
-					apin.renetmac(mac, k[:24])
-				return self.response.true()
-		return self.response.false()
 
 	def _connect_process(self, mac, macpeer, data, connection):
 		ss = self.createtoken()
@@ -477,3 +485,14 @@ class Request(object):
 			except:
 				break
 		udp.close()
+	def logout(self, data):
+		""" logout of api key user """
+		apikey   = data["apikey"]
+		mac 	 = data["mac"]
+		user 	 = Users(self.database, self.datatype)
+		if user.checkapikey(apikey):
+			apiuser  = APIusers(self.database, self.datatype)
+			username = user.getuser(apikey)
+			apiuser.removemac(username, mac)
+			return self.response.true()
+		return self.response.false()
