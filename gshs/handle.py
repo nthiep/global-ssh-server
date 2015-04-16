@@ -31,7 +31,7 @@ class Handle(Thread):
 		try:
 			conn = Database()
 			database = conn.connect()
-			datatype = conn.database
+			datatype = conn.datatype
 		except Exception, e:
 			print e
 			raise Exception("Database Error: can connect to database")

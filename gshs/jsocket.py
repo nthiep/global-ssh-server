@@ -61,7 +61,7 @@ class JsonSocket(object):
 			self.socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
 		else:
 			self.socket = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
-		if not port:
+		if not port and port != 0:
 			self.port 	= SERVER_PORT
 			self._bind(self.port)
 		else:
