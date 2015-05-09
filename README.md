@@ -1,13 +1,12 @@
 Global-SSH-Server-Webservice
-
 ==========
-
 Description: Global-SSH server is help client connect.
 			Webservice manager user, domain, machine.
 
-Author: Nguyen Thanh Hiep and Nguyen Huu Dinh
-Platform: Django
-Database: MongoDB
+<!-- highlight:-d language:console -->
+	Author: Nguyen Thanh Hiep and Nguyen Huu Dinh
+	Platform: Django
+	Database: MongoDB
 How use it:
 -------
 you need virtual environment to run:
@@ -26,4 +25,6 @@ run server:
 	$ cd global-ssh-server/gshproject
 	$ python manager.py runserver
 you can edit database in global-ssh-server/gshproject/gshproject/seting.py
+
 View details at: https://gssh.github.io
+-------
