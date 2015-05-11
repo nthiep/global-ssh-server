@@ -25,7 +25,7 @@ def register(request):
 		form = UserCreationForm(request.POST)
 		if form.is_valid():
 			new_user = form.save()
-			return HttpResponseRedirect('/login')
+			return HttpResponseRedirect('/login/?redirect=register')
 	else:
 		form = UserCreationForm()
 	return render(request, "pages/register.html", {
@@ -68,8 +68,11 @@ def user_login(request):
 
 	# The request is not a HTTP POST, so display the login form.
 	# This scenario would most likely be a HTTP GET.
+	redirect = False
+	if 'redirect' in request.GET:
+		redirect = True
 	context = RequestContext(request)
-	return render_to_response('pages/login.html', {'error': error}, context)
+	return render_to_response('pages/login.html', {'error': error, 'redirect': redirect}, context)
 
 @login_required
 def user_logout(request):

@@ -245,13 +245,13 @@ class Request(object):
 		machine = Machine.objects.get(mac=data["mac"])
 		sport = session.sport
 		nata = session.nat
-		syma = session.issym
+		syma = session.sym
 		if machine.gateway is None:
 			natb='D'
 			symb=False
 		else:
 			natb = machine.gateway.nat
-			symb = machine.gateway.issym
+			symb = machine.gateway.sym
 
 		worka, workb = self.connect_response(nata, natb, syma, symb)
 		connp = self.session[session_id]
@@ -273,9 +273,8 @@ class Request(object):
 		send_obj	= self.response.checknat(True, port, True)	
 		connection.send_obj(send_obj)
 		connection.close()
-		conn = sock.read_obj()
-		conn = s.set_socket(conn)
-		return conn
+		data = sock.read_obj()
+		return sock
 	def checknat_listen(self, connection):
 		sock 	= JsonSocket(JsonSocket.TCP)
 		port = sock.set_server(0)
@@ -285,7 +284,7 @@ class Request(object):
 		connection[0].close()
 		c = sock.accept_connection()
 		conn = JsonSocket(JsonSocket.TCP)
-		s.set_socket(c)
+		conn.set_socket(c)
 		connection[0]= conn
 		return connection
 
@@ -332,7 +331,7 @@ class Request(object):
 		addr, port = connection.getpeername()
 		conn = []
 		conn.append(connection)
-		_issym = False
+		_sym = False
 		nat = self.checknat_function(conn, laddr, lport, addr, port)
 		if nat in ['S', 'A', 'DA']:
 			_i = 0
@@ -340,9 +339,9 @@ class Request(object):
 			_conn = conn[0]
 			while _i < 3:
 				_conn = self.checknat_symmetric(_conn)
-				ad, po = _conn.getpeername()
+				ad, po = _conn.addr
 				if _sport and po != _sport:
-					_issym = True
+					_sym = True
 					break
 		if nat == 'D':
 			return self.response.checknat(False)
@@ -351,7 +350,7 @@ class Request(object):
 		machine.save()
 		if created:
 			gateway.nat = nat 
-			gateway.issym = _issym
+			gateway.sym = _sym
 			gateway.save()
 		send_obj = self.response.checknat(False)
 		conn[0].send_obj(send_obj)

@@ -6,7 +6,7 @@ class Session(models.Model):
 	addr = models.CharField(max_length=256)
 	port = models.CharField(max_length=256)
 	nat = models.CharField(max_length=256)
-	issym = models.CharField(max_length=256)
+	sym = models.CharField(max_length=256)
 	sport = models.CharField(max_length=256)
 	udp = models.BooleanField(default=False)
 	udphost = models.CharField(max_length=256)
