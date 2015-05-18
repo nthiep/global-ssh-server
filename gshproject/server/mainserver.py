@@ -17,21 +17,6 @@ import logging.handlers, logging
 from .request import Request
 from .jsocket import JsonSocket
 from .config import SERVER_PORT, SERVER_TIMEOUT, LOG_FILENAME
-
-LOG_LEVEL = logging.INFO  # Could be e.g. "DEBUG" or "WARNING"
-
-
-# Make a class we can use to capture stdout and sterr in the log
-class MyLogger(object):
-	def __init__(self, logger, level):
-		"""Needs a logger and a logger level."""
-		self.logger = logger
-		self.level = level
- 
-	def write(self, message):
-		# Only log if there is a message (not just a new line)
-		if message.rstrip() != "":
-			self.logger.log(self.level, message.rstrip())
  
 class SocketServer(Thread):
 	def __init__(self):

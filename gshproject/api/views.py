@@ -243,3 +243,21 @@ def AuthWorkgroupView(request):
         machine.domain = None 
         machine.save()
         return HttpResponse(json.dumps({"status": "success"}), status=200)
+@csrf_exempt
+def NatconfigView(request):
+    if request.method == 'POST':
+        try:
+            mac = request.REQUEST["mac"]
+            nat = request.REQUEST["nat"]
+            nat_tcp = request.REQUEST["nat_tcp"]
+        except:
+            return HttpResponse(json.dumps({"status": "request not accept"}), status=400)
+
+        try:
+            machine = Machine.objects.get(mac=mac)
+        except Machine.DoesNotExist:
+            return HttpResponse(json.dumps({"status": "Machine.DoesNotExist"}), status=400)
+        machine.nat=int(nat)
+        machine.nat_tcp=int(nat_tcp)
+        machine.save() 
+        return HttpResponse(json.dumps({"status": "success"}), status=200)

@@ -61,11 +61,11 @@ class JsonSocket(object):
 			if self.tcp:
 				self.socket_obj.send(msg)
 				return True
-			elif(self.peer):
-				if peer:
-					self.socket_obj.sendto(peer, msg)
-				else:
-					self.socket_obj.sendto(self.peer, msg)
+			elif peer:
+				self.socket_obj.sendto(msg, peer)
+				return True
+			elif self.peer:
+				self.socket_obj.sendto(msg, self.peer)
 				return True
 		return False
 

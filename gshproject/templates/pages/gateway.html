@@ -38,18 +38,12 @@
                             <thead>
                                 <tr>
                                     <th>IP</th>
-                                    <th>NAT TYPE</th>
-                                    <th>SYMETRIC</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for g in data %}
 								<tr><td>
 									{{ g.ip }}
-								</td><td>
-									{{ g.nat }}
-								</td><td> 
-									{{ g.sym }}
 								</td></tr>
 								{% endfor %}
                             </tbody>

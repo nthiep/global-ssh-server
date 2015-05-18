@@ -8,9 +8,9 @@ urlpatterns = patterns('',
 	url(r'^machine/$', views.MachineView.as_view(), name="machine"),
 	url(r'^machine/info/$', views.MachineInfoView, name="machine_info"),
 	url(r'^workgroup/$', views.WorkgroupView, name="workgroup"),
-	url(r'^workgroup/authorization/$', views.AuthWorkgroupView, name="join_workgroup"),
-	
+	url(r'^workgroup/authorization/$', views.AuthWorkgroupView, name="join_workgroup"),	
 	url(r'^authorization/$', views.AuthorizationView.as_view(), name="authorization"),
+	url(r'^natconfig/$', views.NatconfigView, name="nat_config"),
 
 )
 

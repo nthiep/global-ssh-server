@@ -69,8 +69,10 @@ class Request(object):
 			private = True
 
 		if not self.listpeer.check(mac):
+			ippub = connection.getpeername()[0]		
+			gateway, created = Gateway.objects.get_or_create(ip=ippub)
 			machine, created = Machine.objects.get_or_create(mac=mac, hostname=hostname,\
-								platform=platform, ip=ip, private=private)
+								platform=platform, ip=ip, gateway=gateway, private=private)
 			connection.none_timeout()
 			connection.set_keepalive()
 			peer 		= peer_mac(mac, connection)
@@ -119,14 +121,9 @@ class Request(object):
 	def _connect_process(self, machine, data, connection):
 		addr, port = connection.getpeername()
 		source = Machine.objects.get(mac=data["mac"])
-		if source.gateway is None:
-			nat = 'D'
-			sym = False
-		else:
-			nat = source.gateway.nat
-			sym = source.gateway.sym
+		nat = source.nat
 		session, created 	= Session.objects.get_or_create(laddr=data["laddr"], lport=data["lport"], 
-			addr = addr, port = port, nat = nat, sym = sym, sport = data["sport"])
+			addr = addr, port = port, nat = nat, sport = data["sport"])
 		self.session[session.id] = connection
 		connp = self.listpeer.getconnect(machine[0].mac)
 		if not connp:
@@ -172,68 +169,51 @@ class Request(object):
 			return self.response.connect(machine)
 		return self.response.false()
 
-	def connect_response(self, nata, natb, syma, symb):
+	def connect_response(self, nata, natb, nata_tcp, natb_tcp):
 		""" response type of connect """
-		_direct 	= "DRT"		#for a: connect direct when b on the internet
-		_lssv 		= "LSV"		#for b: listen on port if ssh port change
-		_listen 	= "LIS"		#for a: listen port when a is symmetric nat and b is direct
-		_revers 	= "REV" 	#for b: connect direct when a on the internet
-		_hole		= "HOL"		#for a,b: connect via hole punching, a and b is cone nat
-		_mhole		= "MHO"		#for a, b: connect via multi hole punching with ascending port
-		_mholed		= "MHD"		#for a, b: connect via multi hole punching with deascending port
-		_uhole		= "UHO"		#for a, b: connect via udp hole punching
-		_relay 		= "REL"		#for a, b: connect use relay server, with symmetric nat
+		DIRECT 	= "DRT"		#for a: connect direct when b on the internet
+		REVERS 	= "REV" 	#for b: connect direct when a on the internet
+		THOLE	= "THO"		#for a, b: connect via tcp hole punching, a and b is cone nat
+		MHOLE	= "MHO"		#for a, b: connect via tcp multi hole punching with ascending port
+		MHOLED	= "MHD"		#for a, b: connect via tcp multi hole punching with deascending port
+		UHOLE	= "UHO"		#for a, b: connect via udp hole punching
+		RELAY 	= "REL"		#for a, b: connect use relay server, with symmetric nat
 
-
-		# connect table of different nat
-		#---------------------------------------------------------------------
-		#			| Drect | Full cone | ascending or desc | symmetric
-		# Direct 	| _dir 	| reversal 	| reversal	 		| reversal
-		# Full cone | _dir 	| hole 		| multi hole 		| udp hole
-		# D/ascen.. | _dir 	| multi hole| udp hole 			| relay
-		# Symmetric	| _dir 	| udp hole 	| relay 			| relay
-		# --------------------------------------------------------------------
+		# connect table of different nat RFC 3489
+		#----------------------------------------------------------------------------------
+		# NATA/NATB	| Drect | Full cone | Restricted Cone 	| Port Restricted 	| symmetric
+		# Direct 	| dir 	| reversal 	| reversal	 		| reversal			| reversal
+		# Full cone | dir 	| direct	| reversal	 		| reversal			| reversal
+		# R Cone 	| dir 	| direct 	| udp hole 			| udp hole			| udp hole
+		# P R Cone	| dir 	| direct 	| udp hole			| udp hole			| relay
+		# Symmetric	| dir 	| direct 	| udp hole 			| relay				| relay
+		# --------------------------------------------------------------------------------
 		# if connect not work, it will connect via udp hole --> relay
-		#
+		# nat type 1 - 12 view RFC 5389, RFC 5780
+		# nat tcp type 1-5 and 10
+		# connect table of different nat RFC 5780
+		# NATA/NATB | 
 
-		if natb == 'D':
-			return _direct, _lssv
-		"""
-		if nata == 'D':
-			return _listen, _revers
-		"""
-		#this is a test
-		if nata == 'D':
-			return _uhole, _uhole
-		
-		if nata == 'F':
-			if natb == 'F':
-				return _hole, _hole
-			if natb == 'A':
-				return _mhole, _hole
-			if natb == 'DA':
-				return _mholed, _hole
-			if natb == 'S':
-				return _uhole, _uhole
-		if nata == 'A' or nata == 'DA':
-			if natb == 'F':
-				if nata == 'A':
-					return _hole, _mhole
-				if nata == "DA":
-					return _hole, _mholed
-			if natb == 'A' or natb == 'DA':
-				return _uhole
-			if natb == 'S':
-				if not syma or not symb:
-					return _uhole, _uhole
-				return _relay, _relay
-		if nata == 'S':
-			if natb == 'F':
-				return _uhole, _uhole
-			if not syma or not symb:
-				return _uhole, _uhole
-			return _relay, _relay
+		# return if internet or full cone nat
+		if natb_tcp == 10 or natb == 1 or natb == 10:
+			return DIRECT
+		if nata_tcp == 10 or nata == 1 or nata == 10:
+			return REVERS
+		# connect via TCP
+		if nata_tcp == 1 and natb_tcp == 1:
+			if nata in range(1, 3) and natb in range(1,3):
+				return THOLE
+		if (nata_tcp == 4 and natb_tcp == 1 ) or (nata_tcp == 1 and natb_tcp == 4 ):
+			if nata in range(1, 3) and natb in range(1,3):
+				return MHOLE
+		if (nata_tcp == 5 and natb_tcp == 1 ) or (nata_tcp == 1 and natb_tcp == 5 ):
+			if nata in range(1, 3) and natb in range(1,3):
+				return MHOLED
 
+		# connect via UDP
+		if nata in [1,2,3,4,7] or natb in [1,2,3,4,7]:
+			return UHOLE
+		return RELAY
 
 	def accept_connect(self, data, connection):
 		session_id = data["session"]
@@ -245,116 +225,22 @@ class Request(object):
 		machine = Machine.objects.get(mac=data["mac"])
 		sport = session.sport
 		nata = session.nat
-		syma = session.sym
-		if machine.gateway is None:
-			natb='D'
-			symb=False
-		else:
-			natb = machine.gateway.nat
-			symb = machine.gateway.sym
+		nata_tcp = session.nat_tcp
+		natb = machine.nat
+		natb_tcp = machine.nat_tcp
 
-		worka, workb = self.connect_response(nata, natb, syma, symb)
+		work = self.connect_response(nata, natb, nata_tcp, natb_tcp)
 		connp = self.session[session_id]
 		addr, port = connection.getpeername()
 		p = self.response.accept_connect(session_id, data["laddr"],
-		 	data["lport"], addr, port, session.addr, worka)
+		 	data["lport"], addr, port, session.addr, work)
 		q = self.response.accept_connect(session_id, session.laddr,
-			session.lport, session.addr, session.port, addr, workb, sport)
+			session.lport, session.addr, session.port, addr, work, sport)
 		connp.send_obj(p)
 		connection.send_obj(q)
 		connp.close()
 		connection.close()
 		del self.session[session_id]
-		return False
-		
-	def checknat_symmetric(self, connection):
-		sock = JsonSocket(JsonSocket.UDP)
-		port = sock.set_server(0)
-		send_obj	= self.response.checknat(True, port, True)	
-		connection.send_obj(send_obj)
-		connection.close()
-		data = sock.read_obj()
-		return sock
-	def checknat_listen(self, connection):
-		sock 	= JsonSocket(JsonSocket.TCP)
-		port = sock.set_server(0)
-		sock.set_timeout()
-		send_obj	= self.response.checknat(True, port)
-		connection[0].send_obj(send_obj)
-		connection[0].close()
-		c = sock.accept_connection()
-		conn = JsonSocket(JsonSocket.TCP)
-		conn.set_socket(c)
-		connection[0]= conn
-		return connection
-
-	def checknat_function(self, connection, laddr, lport, addr, port):
-		if addr == laddr:
-			return 'D'
-		else:
-			if lport == port:
-				return 'F'
-			else:
-				_i 		= 0
-				_asc 	= 0
-				_desc 	= 0
-				while _i < 3:
-					connection = self.checknat_listen(connection)
-					ad, nport = connection[0].getpeername()
-					ab = nport - port
-					if abs(ab) > 10:
-						return 'S'
-						break
-					else:
-						if ab > 0:
-							_asc +=1
-						else:
-							_desc +=1
-						port = nport
-						_i +=1				
-				if _asc >0 and _desc >0:
-					return 'S'
-				if _asc:
-					return 'A'
-				else:
-					return 'DA'
-	def checknat(self, data, connection):
-		""" check machine nat type """
-		mac 	= data["mac"]
-		laddr 	= data["laddr"]
-		lport 	= data["lport"]
-
-		try:
-			machine	   = Machine.objects.get(mac=mac)
-		except Machine.DoesNotExist:
-			return self.response.checknat(False)
-		addr, port = connection.getpeername()
-		conn = []
-		conn.append(connection)
-		_sym = False
-		nat = self.checknat_function(conn, laddr, lport, addr, port)
-		if nat in ['S', 'A', 'DA']:
-			_i = 0
-			_sport = False
-			_conn = conn[0]
-			while _i < 3:
-				_conn = self.checknat_symmetric(_conn)
-				ad, po = _conn.addr
-				if _sport and po != _sport:
-					_sym = True
-					break
-		if nat == 'D':
-			return self.response.checknat(False)
-		gateway, created = Gateway.objects.get_or_create(ip=addr)
-		machine.gateway = gateway
-		machine.save()
-		if created:
-			gateway.nat = nat 
-			gateway.sym = _sym
-			gateway.save()
-		send_obj = self.response.checknat(False)
-		conn[0].send_obj(send_obj)
-		conn[0].close()
 		return False
 		
 	def _relay_forward(self, session, source, destination):

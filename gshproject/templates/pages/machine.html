@@ -62,8 +62,8 @@
                                         PUBLIC
                                     {% endif %} 
                                 </td><td>
-                                {% if m.gateway.id %}
-                                <a href="/gateway/{{ m.gateway }}/">
+                                {% if m.gateway %}
+                                <a href="/gateway/{{ m.gateway.id }}/">
 									{{ m.gateway.ip }}
                                 </a>
                                 {% else %}
