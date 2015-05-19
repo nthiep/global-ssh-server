@@ -43,6 +43,7 @@
                                     <th>IP</th>
                                     <th>PRIVACY</th>
                                     <th>GATEWAY</th>
+                                    <th>NAT</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -62,13 +63,11 @@
                                         PUBLIC
                                     {% endif %} 
                                 </td><td>
-                                {% if m.gateway %}
                                 <a href="/gateway/{{ m.gateway.id }}/">
 									{{ m.gateway.ip }}
                                 </a>
-                                {% else %}
-                                    Internet
-                                {% endif %}
+                                </td><td>
+                                {{ m.nat }}
 								</td></tr>
 								{% endfor %}
                             </tbody>

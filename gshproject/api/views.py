@@ -162,12 +162,9 @@ def MachineInfoView(request):
                 items_data['join'] = "workgroup: "+ machine.workgroup.id
         else:
             items_data['join'] = "N/A"
-        if machine.gateway:
-            items_data['gateway'] = machine.gateway.ip
-            items_data['nat'] = machine.gateway.nat
-        else:
-            items_data['gateway'] = "internet"
-            items_data['nat'] = "N/A"
+        items_data['gateway'] = machine.gateway.ip
+        items_data['nat'] = machine.nat
+        items_data['nat_tcp'] = machine.nat_tcp
         items_data['added'] = machine.added
         items_data['hostname'] = machine.hostname
         items_data['platform'] = machine.platform

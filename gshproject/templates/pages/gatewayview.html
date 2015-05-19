@@ -16,15 +16,11 @@
                 Gateway {{ data.ip }} Detail
             </div>
                 <div class="alert alert-info">
-                    NAT TYPE:  {{ data.nat }}
+                    LOCATION:  {{ city }}
                 </div>
 
                 <div class="alert alert-info">
-                {% if gata.sym %}
-                    SYMMETRIC NAT: TRUE
-                {% else %}
-                    SYMMETRIC NAT: FALSE
-                {% endif %}
+                    COUNTRY: {{ country }}
                 </div>
 
             </div>

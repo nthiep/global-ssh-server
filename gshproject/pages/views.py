@@ -234,8 +234,12 @@ def GatewayDetailView(request, gateway):
 		return HttpResponseRedirect('/dashboard/')
 	domain_obj = Domain.objects.filter(user=request.user)
 
+	from django.contrib.gis.utils import GeoIP
+	g = GeoIP()
+	city = g.city(g.ip)['city']
+	country = g.city(g.ip)['country']
 	return render_to_response('pages/gatewayview.html', {'page': 'Gateway %s' %g.ip,
-	 'data': g, 'domain_list': domain_obj}, context)
+	 'data': g, 'city': city, 'country': country, 'domain_list': domain_obj}, context)
 @login_required
 def NetmapView(request, domain=None):
 	context = RequestContext(request)
