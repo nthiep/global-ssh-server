@@ -38,12 +38,18 @@
                             <thead>
                                 <tr>
                                     <th>IP</th>
+                                    <th>CITY</th>
+                                    <th>COUNTRY</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for g in data %}
 								<tr><td>
 									{{ g.ip }}
+                                </tr><td>
+                                    {{ g.city }}
+                                </tr><td>
+                                    {{ g.country }}
 								</td></tr>
 								{% endfor %}
                             </tbody>

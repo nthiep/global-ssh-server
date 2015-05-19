@@ -1,9 +1,13 @@
 from django.db import models
+from django.db.models.signals import post_save
+from node.utils import create_gateway
 from manage.models import Domain, Workgroup
 
 # Create your models here.
 class Gateway(models.Model):	
-	ip  = models.CharField(max_length=256)
+	ip  	= models.CharField(max_length=256)
+	city  	= models.CharField(max_length=256)
+	country  = models.CharField(max_length=256)
 	def __str__(self):
 		return self.ip
 class Machine(models.Model):
@@ -20,3 +24,5 @@ class Machine(models.Model):
 	nat_tcp = models.IntegerField(default=3)
 	def __str__(self):
 		return str(self.mac)
+
+post_save.connect(create_gateway, sender=Gateway)

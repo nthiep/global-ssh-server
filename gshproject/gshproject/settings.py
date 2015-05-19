@@ -11,7 +11,7 @@ ADMINS = (
 APPEND_SLASH = False
 MANAGERS = ADMINS
 # GEOIP_PATH
-GEOIP_PATH = PROJECT_PATH + '/geoip'
+GEOIP_PATH = os.path.join(PROJECT_PATH, '../geoip')
 
 DATABASES = {
     'default': {
