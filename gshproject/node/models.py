@@ -16,7 +16,7 @@ class Machine(models.Model):
 	platform = models.CharField(max_length=256)
 	ip   	= models.CharField(max_length=256)
 	private = models.BooleanField(default=False)
-	nat 	= models.IntegerField(default=0)
-	nat_tcp = models.IntegerField(default=0)
+	nat 	= models.IntegerField(default=9)
+	nat_tcp = models.IntegerField(default=3)
 	def __str__(self):
 		return str(self.mac)
