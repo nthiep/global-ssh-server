@@ -13,20 +13,18 @@
 
 from threading import Thread
 import datetime, hashlib, json, time
-from node.models import Machine
 class Handle(Thread):
 
-	def __init__(self, connection, mac, listpeer):
+	def __init__(self, connection, machine, listpeer):
 		super(Handle, self).__init__()
 		self.daemon 	= True
 		self.connection = connection
-		self.mac 		= mac
+		self.machine	= machine
 		self.listpeer 	= listpeer
 	def remove_peer(self):
 		""" remove all infomation of machine when disconnect """
-		machine = Machine.objects.get(mac=self.mac)
-		machine.delete()
-		self.listpeer.remove(self.mac)
+		self.machine.delete()
+		self.listpeer.remove(self.machine.mac)
 	def run(self):
 		while True:
 			try:

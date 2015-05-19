@@ -1,5 +1,6 @@
 from rest_framework import permissions
 from manage.models import Domain
+from node.models import Machine
 class IsAuthenticatedOrCreate(permissions.IsAuthenticated):
 	def has_permission(self, request, view):
 		if request.method == 'POST':
@@ -12,13 +13,14 @@ class DomainAuthenticate(object):
 		if request.method == 'POST':
 			try:
 				domain = Domain.objects.get(domain=request.data['domain'])
+				machine = Machine.objects.get(id=request.data['id_machine'])
 				if domain and domain.check_password(request.data['password']):
 					if domain.filter_mode:
 						if domain.filter_type:
-							if request.data["mac"] not in self.remove_space(domain.listmac).split(";"):
+							if machine.mac not in self.remove_space(domain.listmac).split(";"):
 								return False
 						else:
-							if request.mac in self.remove_space(domain.listmac).split(";"):
+							if machine.mac in self.remove_space(domain.listmac).split(";"):
 								return False
 					request.domain = domain
 					return True

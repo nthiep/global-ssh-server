@@ -44,6 +44,7 @@
                                     <th>PRIVACY</th>
                                     <th>GATEWAY</th>
                                     <th>NAT</th>
+                                    <th>TIME ONLINE</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -68,6 +69,8 @@
                                 </a>
                                 </td><td>
                                 {{ m.nat }}
+                                </td><td>
+                                {{ m.added }}
 								</td></tr>
 								{% endfor %}
                             </tbody>

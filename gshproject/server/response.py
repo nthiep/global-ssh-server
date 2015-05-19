@@ -13,7 +13,8 @@ class Response(object):
 		return {"response": False}
 	def true(self):
 		return {"response": True}
-
+	def keepconnect(self, id_machine):
+		return {"response": True, 'id_machine': id_machine}	
 	def checknat(self, check, port = None, isudp = False):
 		rs = {"response": True, "check": check, "port": port, "isudp" : isudp}
 		return rs

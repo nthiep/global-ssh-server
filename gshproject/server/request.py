@@ -28,6 +28,7 @@ class ls_connect(object):
 		self.peer = []
 
 	def addpeer(self, peer):
+		self.remove(peer.mac)
 		self.peer.append(peer)
 
 	def getconnect(self, mac):
@@ -71,17 +72,22 @@ class Request(object):
 		if not self.listpeer.check(mac):
 			ippub = connection.getpeername()[0]		
 			gateway, created = Gateway.objects.get_or_create(ip=ippub)
-			machine, created = Machine.objects.get_or_create(mac=mac, hostname=hostname,\
-								platform=platform, ip=ip, gateway=gateway, private=private)
+			machine, created = Machine.objects.get_or_create(mac=mac)
+			machine.hostname = hostname
+			machine.platform = platform
+			machine.ip 		 = ip
+			machine.gateway  = gateway
+			machine.private  = private
+			machine.save()
 			connection.none_timeout()
 			connection.set_keepalive()
 			peer 		= peer_mac(mac, connection)
 			self.listpeer.addpeer(peer)
-			newhandle 	= Handle(connection, mac, self.listpeer)
+			newhandle 	= Handle(connection, machine, self.listpeer)
 			newhandle.start()
-			connection.send_obj(self.response.true())
+			connection.send_obj(self.response.keepconnect(id_machine))
 			return False
-		return False
+		return self.response.false()
 	def createtoken(self):
 		""" create random api key token"""
 		code = random.getrandbits(128)
@@ -120,7 +126,7 @@ class Request(object):
 
 	def _connect_process(self, machine, data, connection):
 		addr, port = connection.getpeername()
-		source = Machine.objects.get(mac=data["mac"])
+		source = Machine.objects.get(id=data["id_machine"])
 		nat = source.nat
 		session, created 	= Session.objects.get_or_create(laddr=data["laddr"], lport=data["lport"], 
 			addr = addr, port = port, nat = nat, sport = data["sport"])
@@ -138,12 +144,15 @@ class Request(object):
 	def connect(self, data, connection):
 		""" request connect to other machine """
 		print data
-		token 	 = data["token"]
-		mac 	 = data["mac"]
-		peer	 = data["peer"]
-		macpeer  = data["macpeer"]
-		workgroup_id = data["workgroup_id"]
-		workgroup_secret = data["workgroup_secret"]
+		try:
+			token 	 	= data["token"]
+			id_machine 	= data["id_machine"]
+			peer	 	= data["peer"]
+			macpeer  	= data["macpeer"]
+			workgroup_id = data["workgroup_id"]
+			workgroup_secret = data["workgroup_secret"]
+		except:
+			return response.false()
 		if token and self.check_token(token):
 			try:
 				access = AccessToken.objects.get(token=token)
@@ -211,7 +220,7 @@ class Request(object):
 				return MHOLED
 
 		# connect via UDP
-		if nata in [1,2,3,4,7] or natb in [1,2,3,4,7]:
+		if nata in [1,2,3,4,7,10,11,12] or natb in [1,2,3,4,7,10,11,12]:
 			return UHOLE
 		return RELAY
 
@@ -222,7 +231,7 @@ class Request(object):
 		except Session.DoesNotExist:
 			return False
 		print "linked request session: %s" % session_id
-		machine = Machine.objects.get(mac=data["mac"])
+		machine = Machine.objects.get(id=data["id_machine"])
 		sport = session.sport
 		nata = session.nat
 		nata_tcp = session.nat_tcp

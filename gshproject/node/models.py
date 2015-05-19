@@ -6,8 +6,8 @@ from manage.models import Domain, Workgroup
 # Create your models here.
 class Gateway(models.Model):	
 	ip  	= models.CharField(max_length=256)
-	city  	= models.CharField(max_length=256)
-	country  = models.CharField(max_length=256)
+	city  	= models.CharField(max_length=256, null=True, blank=True)
+	country  = models.CharField(max_length=256, null=True, blank=True)
 	def __str__(self):
 		return self.ip
 class Machine(models.Model):

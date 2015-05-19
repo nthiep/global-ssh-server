@@ -48,9 +48,9 @@ class AuthorizationView(APIView):
     def remove_space(self, string):
         return string.replace(" ", "").replace("\r\n", "").replace("\t", "")
     def post(self, request):
-        mac = request.data["mac"]
+        id_machine = request.data["id_machine"]
         try:
-            machine = Machine.objects.get(mac=mac)
+            machine = Machine.objects.get(id=id_machine)
         except Machine.DoesNotExist:
             return Response({"status": "Machine Not Valid"}, status=status.HTTP_400_BAD_REQUEST)
         if request.auth:
@@ -61,10 +61,10 @@ class AuthorizationView(APIView):
             if request.data["request"] == "authorization":
                 if access.user.filter_mode:
                     if access.user.filter_type:
-                        if mac not in self.remove_space(access.user.listmac).split(";"):
+                        if machine.mac not in self.remove_space(access.user.listmac).split(";"):
                             return Response({"status": "Access Denied"}, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        if mac in self.remove_space(access.user.listmac).split(";"):
+                        if machine.mac in self.remove_space(access.user.listmac).split(";"):
                             return Response({"status": "Access Denied"}, status=status.HTTP_400_BAD_REQUEST)
                 machine.domain=access.user
             elif request.data["request"] == "logout":
@@ -202,18 +202,16 @@ def WorkgroupView(request):
                 workgroup = Workgroup.objects.get(id=request.REQUEST["workgroup_id"],
                     secret_key=request.REQUEST["workgroup_secret"], mac_admin = request.REQUEST["mac"])
             except Workgroup.DoesNotExist:
-                return HttpResponse(json.dumps({"status": "error"}), status=400)
+                return HttpResponse(json.dumps({"status": "not delete in server"}), status=400)
 
             workgroup.delete()
-            workgroup.save()
-
             return HttpResponse(json.dumps({"status": "success"}), status=200)
 
 @csrf_exempt
 def AuthWorkgroupView(request):
     if request.method == 'POST':
         try:
-            mac = request.REQUEST["mac"]
+            id_machine = request.REQUEST["id_machine"]
             workgroup_id = request.REQUEST["workgroup_id"]
             workgroup_secret = request.REQUEST["workgroup_secret"]
             
@@ -221,7 +219,7 @@ def AuthWorkgroupView(request):
             return HttpResponse(json.dumps({"status": "request not accept"}), status=400)
 
         try:
-            machine = Machine.objects.get(mac=mac)
+            machine = Machine.objects.get(id=id_machine)
         except Machine.DoesNotExist:
             return HttpResponse(json.dumps({"status": "Machine.DoesNotExist"}), status=400)
         try:
@@ -244,14 +242,14 @@ def AuthWorkgroupView(request):
 def NatconfigView(request):
     if request.method == 'POST':
         try:
-            mac = request.REQUEST["mac"]
+            id_machine = request.REQUEST["id_machine"]
             nat = request.REQUEST["nat"]
             nat_tcp = request.REQUEST["nat_tcp"]
         except:
             return HttpResponse(json.dumps({"status": "request not accept"}), status=400)
 
         try:
-            machine = Machine.objects.get(mac=mac)
+            machine = Machine.objects.get(id=id_machine)
         except Machine.DoesNotExist:
             return HttpResponse(json.dumps({"status": "Machine.DoesNotExist"}), status=400)
         machine.nat=int(nat)

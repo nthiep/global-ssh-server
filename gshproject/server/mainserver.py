@@ -29,7 +29,12 @@ class SocketServer(Thread):
 		conn 	= JsonSocket(JsonSocket.TCP)
 		conn.set_socket(connection)
 		conn.set_timeout()
-		data	= conn.read_obj()
+		try:
+			data	= conn.read_obj()
+		except Exception, e:
+			print e
+			conn.close()
+			return
 		question	= self.request.get_request(data)
 		print "%s with request %s" %(str(conn.getpeername()), question)
 		response 	= getattr(self.request, question)(data, conn)
