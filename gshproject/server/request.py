@@ -85,7 +85,7 @@ class Request(object):
 			self.listpeer.addpeer(peer)
 			newhandle 	= Handle(connection, machine, self.listpeer)
 			newhandle.start()
-			connection.send_obj(self.response.keepconnect(id_machine))
+			connection.send_obj(self.response.keepconnect(machine.id))
 			return False
 		return self.response.false()
 	def createtoken(self):
@@ -103,54 +103,67 @@ class Request(object):
 			return False
 		except AccessToken.DoesNotExist:
 			return False
-	def get_machine_domain(self, host=None, macpeer=None, domain=None):
+	def get_machine_domain(self, host=None, mac=None, domain=None):
 		try:
 			if macpeer:
-				return Machine.objects.filter(mac=macpeer, domain=domain, private=False)
+				return Machine.objects.filter(mac=mac, domain=domain, private=False)
 			elif host:
 				return Machine.objects.filter(hostname=host, domain=domain, private=False)
 			return False
 		except Machine.DoesNotExist:
-			print "not machine"
+			print "not machine in domain"
 			return False
-	def get_machine_workgroup(self, host=None, macpeer=None, workgroup=None):
+	def get_machine_workgroup(self, host=None, mac=None, workgroup=None):
 		try:
 			if macpeer:
-				return Machine.objects.filter(mac=macpeer, workgroup=workgroup, private=False)
+				return Machine.objects.filter(mac=mac, workgroup=workgroup, private=False)
 			elif host:
 				return Machine.objects.filter(hostname=host, workgroup=workgroup, private=False)
 			return False		
 		except Machine.DoesNotExist:
+			print "not machine in workgroup"
 			return False
 
-
+	def _check_ismac(self, hostname):
+		if re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", hostname.lower()):
+			return True
+		return False
 	def _connect_process(self, machine, data, connection):
 		addr, port = connection.getpeername()
-		source = Machine.objects.get(id=data["id_machine"])
+		try:
+			source = Machine.objects.get(id=data["id_machine"])
+		except:
+			return self.response.false()
 		nat = source.nat
+		nat_tcp = source.nat_tcp
 		session, created 	= Session.objects.get_or_create(laddr=data["laddr"], lport=data["lport"], 
-			addr = addr, port = port, nat = nat, sport = data["sport"])
+			addr = addr, port = port, nat = nat, nat_tcp=nat_tcp, dest_port = data["destination_port"])
 		self.session[session.id] = connection
 		connp = self.listpeer.getconnect(machine[0].mac)
 		if not connp:
 			return self.response.false()
-		connp.send_obj({"response": "bind", "session": session.id})
+		connp.send_obj({"response": "bind", "session": session.id, 'machine': source.mac})
 		time.sleep(10)
 		try:
 			del self.session[session.id]
 		except:
 			pass
-		return False
+		return self.response.false()
 	def connect(self, data, connection):
 		""" request connect to other machine """
 		print data
 		try:
 			token 	 	= data["token"]
 			id_machine 	= data["id_machine"]
-			peer	 	= data["peer"]
-			macpeer  	= data["macpeer"]
+			destination	= data["destination"]
 			workgroup_id = data["workgroup_id"]
 			workgroup_secret = data["workgroup_secret"]
+			host 	= None
+			mac 	= None
+			if self._check_ismac(destination):
+				mac = destination
+			else:
+				host = destination
 		except:
 			return response.false()
 		if token and self.check_token(token):
@@ -159,17 +172,15 @@ class Request(object):
 			except AccessToken.DoesNotExist:
 				return self.response.false()
 
-			machine = self.get_machine_domain(peer, macpeer, access.user)
+			machine = self.get_machine_domain(host, mac, access.user)
 		elif workgroup_id:
 			try:
 				workgroup = Workgroup.objects.get(id=workgroup_id, secret_key=workgroup_secret)
 			except Workgroup.DoesNotExist:
 				return self.response.false()
 
-			machine = self.get_machine_workgroup(peer, macpeer, workgroup)
+			machine = self.get_machine_workgroup(host, mac, workgroup)
 		else:
-			machine = False
-		if not machine:
 			return self.response.false()
 
 		if machine.count() == 1:
@@ -204,19 +215,25 @@ class Request(object):
 		# NATA/NATB | 
 
 		# return if internet or full cone nat
-		if natb_tcp == 10 or natb == 1 or natb == 10:
+		if natb == 1 or natb == 10:
 			return DIRECT
-		if nata_tcp == 10 or nata == 1 or nata == 10:
+		if nata == 1 or nata == 10:
 			return REVERS
+		if nata_tcp == 10 and nata in [11, 12]:
+			if natb in range(1, 4):
+				return THOLE
+		if natb_tcp == 10 and natb in [11, 12]:
+			if nata in range(1, 4):
+				return THOLE
 		# connect via TCP
 		if nata_tcp == 1 and natb_tcp == 1:
-			if nata in range(1, 3) and natb in range(1,3):
+			if nata in range(1, 4) and natb in range(1,4):
 				return THOLE
 		if (nata_tcp == 4 and natb_tcp == 1 ) or (nata_tcp == 1 and natb_tcp == 4 ):
-			if nata in range(1, 3) and natb in range(1,3):
+			if nata in range(1, 4) and natb in range(1,4):
 				return MHOLE
 		if (nata_tcp == 5 and natb_tcp == 1 ) or (nata_tcp == 1 and natb_tcp == 5 ):
-			if nata in range(1, 3) and natb in range(1,3):
+			if nata in range(1, 4) and natb in range(1,4):
 				return MHOLED
 
 		# connect via UDP
@@ -225,14 +242,33 @@ class Request(object):
 		return RELAY
 
 	def accept_connect(self, data, connection):
-		session_id = data["session"]
+		ERROR = False
 		try:
-			session = Session.objects.get(id=session_id)
-		except Session.DoesNotExist:
+			session_id = data["session"]
+			id_machine = data["id_machine"]
+			laddr 	= data["laddr"]
+			lport 	= data["lport"]
+			mac_accept = data["mac_accept"]
+		except:
+			ERROR == True
+		try:
+			session = Session.objects.get(id=str(session_id))
+		except:
+			ERROR = True
+		try:
+			machine = Machine.objects.get(id=str(id_machine))
+		except:
+			ERROR = True
+
+		if not mac_accept or ERROR:
+			connp.send_obj(self.response.false())
+			connection.send_obj(self.response.false())
+			connp.close()
+			connection.close()
+			del self.session[session_id]
 			return False
+
 		print "linked request session: %s" % session_id
-		machine = Machine.objects.get(id=data["id_machine"])
-		sport = session.sport
 		nata = session.nat
 		nata_tcp = session.nat_tcp
 		natb = machine.nat
@@ -241,10 +277,10 @@ class Request(object):
 		work = self.connect_response(nata, natb, nata_tcp, natb_tcp)
 		connp = self.session[session_id]
 		addr, port = connection.getpeername()
-		p = self.response.accept_connect(session_id, data["laddr"],
-		 	data["lport"], addr, port, session.addr, work)
+		p = self.response.accept_connect(session_id, laddr,
+		 	lport, addr, port, session.addr, work, session.dest_port)
 		q = self.response.accept_connect(session_id, session.laddr,
-			session.lport, session.addr, session.port, addr, work, sport)
+			session.lport, session.addr, session.port, addr, work, session.dest_port)
 		connp.send_obj(p)
 		connection.send_obj(q)
 		connp.close()
@@ -283,8 +319,8 @@ class Request(object):
 			print "have session"
 			conna = connection.get_conn()
 			connb = self.session[session_id]
-			conna.none_timeout()
-			connb.none_timeout()
+			conna.settimeout(None)
+			connb.settimeout(None)
 			thread.start_new_thread(self._relay_forward, (session_id, conna, connb))			
 			thread.start_new_thread(self._relay_forward, (session_id, connb, conna))
 			del self.session[session_id]
@@ -313,7 +349,7 @@ class Request(object):
 	def udp_connect(self, session_thread, udp):
 		while True:
 			data = udp.read_obj()
-			addr = udp.getpeername()
+			addr = udp.addr
 			print "connection from udp  %s:%d" % addr 
 			try:
 				session_id = data["session"]
@@ -326,8 +362,8 @@ class Request(object):
 					continue
 				if not session.udp:
 					session.udp = True
-					session.host = host
-					session.port = port
+					session.udphost = host
+					session.udpport = port
 					session.save()
 					continue
 				else:

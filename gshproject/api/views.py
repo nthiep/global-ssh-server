@@ -50,9 +50,12 @@ class AuthorizationView(APIView):
     def post(self, request):
         id_machine = request.data["id_machine"]
         try:
-            machine = Machine.objects.get(id=id_machine)
+            machine = Machine.objects.get(id=str(id_machine))
         except Machine.DoesNotExist:
             return Response({"status": "Machine Not Valid"}, status=status.HTTP_400_BAD_REQUEST)
+        except:
+            return Response({"status": "REQUEST ERROR"}, status=status.HTTP_400_BAD_REQUEST)
+
         if request.auth:
             try:
                 access = AccessToken.objects.get(token=request.auth)
@@ -219,9 +222,12 @@ def AuthWorkgroupView(request):
             return HttpResponse(json.dumps({"status": "request not accept"}), status=400)
 
         try:
-            machine = Machine.objects.get(id=id_machine)
+            machine = Machine.objects.get(id=str(id_machine))
         except Machine.DoesNotExist:
             return HttpResponse(json.dumps({"status": "Machine.DoesNotExist"}), status=400)
+        except:
+            return Response({"status": "REQUEST ERROR"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             workgroup = Workgroup.objects.get(id=workgroup_id, secret_key=workgroup_secret)
         except Workgroup.DoesNotExist:            
@@ -249,9 +255,12 @@ def NatconfigView(request):
             return HttpResponse(json.dumps({"status": "request not accept"}), status=400)
 
         try:
-            machine = Machine.objects.get(id=id_machine)
+            machine = Machine.objects.get(id=str(id_machine))
         except Machine.DoesNotExist:
             return HttpResponse(json.dumps({"status": "Machine.DoesNotExist"}), status=400)
+        except:
+            return Response({"status": "REQUEST ERROR"}, status=status.HTTP_400_BAD_REQUEST)
+
         machine.nat=int(nat)
         machine.nat_tcp=int(nat_tcp)
         machine.save() 

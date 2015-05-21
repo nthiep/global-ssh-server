@@ -13,7 +13,7 @@ class DomainAuthenticate(object):
 		if request.method == 'POST':
 			try:
 				domain = Domain.objects.get(domain=request.data['domain'])
-				machine = Machine.objects.get(id=request.data['id_machine'])
+				machine = Machine.objects.get(id=str(request.data['id_machine']))
 				if domain and domain.check_password(request.data['password']):
 					if domain.filter_mode:
 						if domain.filter_type:
