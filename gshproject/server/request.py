@@ -4,7 +4,7 @@
 # Description:	request class object
 #
 
-import socket, json, hashlib, random, time, thread
+import socket, json, hashlib, random, time, thread, re
 from bson	import json_util
 
 from django.utils import timezone
@@ -105,7 +105,7 @@ class Request(object):
 			return False
 	def get_machine_domain(self, host=None, mac=None, domain=None):
 		try:
-			if macpeer:
+			if mac:
 				return Machine.objects.filter(mac=mac, domain=domain, private=False)
 			elif host:
 				return Machine.objects.filter(hostname=host, domain=domain, private=False)
@@ -115,7 +115,7 @@ class Request(object):
 			return False
 	def get_machine_workgroup(self, host=None, mac=None, workgroup=None):
 		try:
-			if macpeer:
+			if mac:
 				return Machine.objects.filter(mac=mac, workgroup=workgroup, private=False)
 			elif host:
 				return Machine.objects.filter(hostname=host, workgroup=workgroup, private=False)
@@ -165,7 +165,7 @@ class Request(object):
 			else:
 				host = destination
 		except:
-			return response.false()
+			return self.response.false()
 		if token and self.check_token(token):
 			try:
 				access = AccessToken.objects.get(token=token)
@@ -243,14 +243,13 @@ class Request(object):
 
 	def accept_connect(self, data, connection):
 		ERROR = False
+		mac_accept = True
 		try:
 			session_id = data["session"]
 			id_machine = data["id_machine"]
-			laddr 	= data["laddr"]
-			lport 	= data["lport"]
 			mac_accept = data["mac_accept"]
 		except:
-			ERROR == True
+			ERROR = True
 		try:
 			session = Session.objects.get(id=str(session_id))
 		except:
@@ -261,6 +260,7 @@ class Request(object):
 			ERROR = True
 
 		if not mac_accept or ERROR:
+			connp = self.session[session_id]
 			connp.send_obj(self.response.false())
 			connection.send_obj(self.response.false())
 			connp.close()
@@ -269,6 +269,8 @@ class Request(object):
 			return False
 
 		print "linked request session: %s" % session_id
+		laddr 	= data["laddr"]
+		lport 	= data["lport"]		
 		nata = session.nat
 		nata_tcp = session.nat_tcp
 		natb = machine.nat
