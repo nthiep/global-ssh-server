@@ -14,7 +14,7 @@ from manage.models import Domain, Workgroup
 from .handle import Handle
 from .jsocket import JsonSocket
 from .response import Response
-from .models import Session
+from .models import Session, UDPSession, RelaySession
 
 class peer_mac(object):
 	""" save list connection handle"""
@@ -61,13 +61,14 @@ class Request(object):
 		return data["request"]
 
 	def keepconnect(self, data, connection):
-		mac 	 = data["mac"]
-		hostname = data["hostname"]
-		platform = data["platform"]
-		ip 		 = data["ip"]
-		private  = False
-		if data["private"]:
-			private = True
+		try:
+			mac 	 = data["mac"]
+			hostname = data["hostname"]
+			platform = data["platform"]
+			ip 		 = data["ip"]
+			private  = data["private"]
+		except:
+			return self.response.false("Request Not Accept")
 
 		if not self.listpeer.check(mac):
 			ippub = connection.getpeername()[0]		
@@ -87,7 +88,7 @@ class Request(object):
 			newhandle.start()
 			connection.send_obj(self.response.keepconnect(machine.id))
 			return False
-		return self.response.false()
+		return self.response.false("Machine Already Online")
 	def createtoken(self):
 		""" create random api key token"""
 		code = random.getrandbits(128)
@@ -133,7 +134,7 @@ class Request(object):
 		try:
 			source = Machine.objects.get(id=data["id_machine"])
 		except:
-			return self.response.false()
+			return self.response.false("Machine Not Online")
 		nat = source.nat
 		nat_tcp = source.nat_tcp
 		session, created 	= Session.objects.get_or_create(laddr=data["laddr"], lport=data["lport"], 
@@ -141,14 +142,14 @@ class Request(object):
 		self.session[session.id] = connection
 		connp = self.listpeer.getconnect(machine[0].mac)
 		if not connp:
-			return self.response.false()
-		connp.send_obj({"response": "bind", "session": session.id, 'machine': source.mac})
+			return self.response.false("Peer Not Online")
+		connp.send_obj(self.response.request_connect(session.id, source.mac))
 		time.sleep(10)
 		try:
 			del self.session[session.id]
 		except:
 			pass
-		return self.response.false()
+		return self.response.false("Peer Not Response")
 	def connect(self, data, connection):
 		""" request connect to other machine """
 		print data
@@ -165,29 +166,29 @@ class Request(object):
 			else:
 				host = destination
 		except:
-			return self.response.false()
+			return self.response.false("Request Not Accept")
 		if token and self.check_token(token):
 			try:
 				access = AccessToken.objects.get(token=token)
 			except AccessToken.DoesNotExist:
-				return self.response.false()
+				return self.response.false("AccessToken Not Accept")
 
 			machine = self.get_machine_domain(host, mac, access.user)
 		elif workgroup_id:
 			try:
 				workgroup = Workgroup.objects.get(id=workgroup_id, secret_key=workgroup_secret)
 			except Workgroup.DoesNotExist:
-				return self.response.false()
+				return self.response.false("Workgroup Not Accept")
 
 			machine = self.get_machine_workgroup(host, mac, workgroup)
 		else:
-			return self.response.false()
+			return self.response.false("Machine Not Online")
 
 		if machine.count() == 1:
 			return self._connect_process(machine, data, connection)
-		else:
+		elif machine.count() > 1:
 			return self.response.connect(machine)
-		return self.response.false()
+		return self.response.false("Machine Not Online")
 
 	def connect_response(self, nata, natb, nata_tcp, natb_tcp):
 		""" response type of connect """
@@ -261,8 +262,8 @@ class Request(object):
 
 		if not mac_accept or ERROR:
 			connp = self.session[session_id]
-			connp.send_obj(self.response.false())
-			connection.send_obj(self.response.false())
+			connp.send_obj(self.response.false("Machine Not Accept"))
+			connection.send_obj(self.response.false("Not Accept Machine"))
 			connp.close()
 			connection.close()
 			del self.session[session_id]
@@ -316,37 +317,49 @@ class Request(object):
 			pass
 		return False 
 	def relay(self, data, connection):
-		session_id = data["session"]
+		try:
+			session_id = data["session"]		
+		except:
+			return self.response.false("Request not Accept")
+		try:
+			session = Session.objects.get(id=session_id)
+		except:			
+			return self.response.false("Session Not Accept")
 		if self._check_session(session_id):
-			print "have session"
+			print "Have Session %s" %session_id
 			conna = connection.get_conn()
 			connb = self.session[session_id]
 			conna.settimeout(None)
 			connb.settimeout(None)
 			thread.start_new_thread(self._relay_forward, (session_id, conna, connb))			
 			thread.start_new_thread(self._relay_forward, (session_id, connb, conna))
+			relay_session, created = RelaySession.objects.get_or_create(session=session, \
+						sock_a = "%s:%d"%conna.getpeername(), sock_b="%s:%d"%connb.getpeername)
 			del self.session[session_id]
-			print "start thread relay %s" %session_id
+			print "Start Thread Relay %s" %session_id
 		else:
-			print "add session relay %s" %session_id
+			print "Add Session Relay %s" %session_id
 			self.session[session_id] = connection.get_conn()
 		return False
 	def udp_hole(self, data, connection):
-		session_id = data["session"]
+		try:
+			session_id = data["session"]
+		except:
+			return self.response.false("Request not Accept")
 		try:
 			session = Session.objects.get(id=session_id)
-		except Session.DoesNotExist:
-			return False
+		except:			
+			return self.response.false("Session Not Accept")
 		if self._check_session(session_id):
 			port = self.session[session_id]
 			del self.session[session_id]
-			return self.response.portudp(port)
+			return self.response.udp_hole(port)
 		else:
 			udp = JsonSocket(JsonSocket.UDP)
 			port = udp.set_server(0)
 			self.session[session_id] = port
 			thread.start_new_thread(self.udp_connect, (session_id, udp))
-			return self.response.portudp(port)
+			return self.response.udp_hole(port)
 
 	def udp_connect(self, session_thread, udp):
 		while True:
@@ -360,19 +373,18 @@ class Request(object):
 					continue
 				try:
 					session = Session.objects.get(id=session_id)
-				except Session.DoesNotExist:
+				except:
 					continue
-				if not session.udp:
-					session.udp = True
-					session.udphost = host
-					session.udpport = port
-					session.save()
-					continue
-				else:
-					udp.send_obj({"host": host, "port": port}, (session.udphost, int(session.udpport)))
-					udp.send_obj({"host": session.udphost, "port": session.udpport}, addr)
+				try:
+					udp_session = UDPSession.objects.get(session=session)
+					udp.send_obj({"host": host, "port": port}, (udp_session.addr, int(udp_session.port)))
+					udp.send_obj({"host": udp_session.addr, "port": udp_session.port}, addr)
 					print "linked session %s" % session_id
 					break
+				except UDPSession.DoesNotExist:
+					udp_session, created = UDPSession.objects.get_or_create(addr=host,\
+											 port=port, session=session)
+					continue					
 			except:
-				break
+				continue
 		udp.close()

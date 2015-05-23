@@ -9,20 +9,20 @@ class Response(object):
 	def __init__(self):
 		pass
 
-	def false(self):
-		return {"response": False}
+	def false(self, message):
+		return {"response": False, 'message': message}
 	def true(self):
 		return {"response": True}
 	def keepconnect(self, id_machine):
 		return {"response": True, 'id_machine': id_machine}	
-	def checknat(self, check, port = None, isudp = False):
-		rs = {"response": True, "check": check, "port": port, "isudp" : isudp}
-		return rs
 	def connect(self, lsmachine):
 		""" response list mac if same hostname """
 		rs = {"response": True, "choice": True, "machine": lsmachine}
 		return rs
-	def portudp(self, port):
+	def request_connect(self, session, machine):
+		rs = {"response": True, "connect": True, "session": session, 'machine': machine}
+		return rs
+	def udp_hole(self, port):
 		rs = {"response": True, "port": port}
 		return rs
 	def accept_connect(self, session, laddr, lport, addr, port, external, work, dest_port):
