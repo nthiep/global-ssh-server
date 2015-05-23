@@ -52,7 +52,8 @@ class Request(object):
 	"""docstring for Request"""
 	def __init__(self):
 		self.listpeer = ls_connect()
-		self.session  = {}
+		self.relay_sock  	= {}
+		self.udp_hole_sock 	= {}
 		self.response = Response()
 	def get_request(self, data):
 		"""
@@ -306,12 +307,19 @@ class Request(object):
 				print "Exception forward bind", e
 				break
 		try:
-			del self.session[session]
+			del self.relay_sock[session]
 		except:
 			pass
+	def _check_udp_session(self, session):
+		try:
+			self.udp_hole_sock[session]
+			return True
+		except:
+			pass
+		return False 
 	def _check_session(self, session):
 		try:
-			self.session[session]
+			self.relay_sock[session]
 			return True
 		except:
 			pass
@@ -328,18 +336,18 @@ class Request(object):
 		if self._check_session(session_id):
 			print "Have Session %s" %session_id
 			conna = connection.get_conn()
-			connb = self.session[session_id]
+			connb = self.relay_sock[session_id]
 			conna.settimeout(None)
 			connb.settimeout(None)
 			thread.start_new_thread(self._relay_forward, (session_id, conna, connb))			
 			thread.start_new_thread(self._relay_forward, (session_id, connb, conna))
 			relay_session, created = RelaySession.objects.get_or_create(session=session, \
 						sock_a = "%s:%d"%conna.getpeername(), sock_b="%s:%d"%connb.getpeername)
-			del self.session[session_id]
+			del self.relay_sock[session_id]
 			print "Start Thread Relay %s" %session_id
 		else:
 			print "Add Session Relay %s" %session_id
-			self.session[session_id] = connection.get_conn()
+			self.relay_sock[session_id] = connection.get_conn()
 		return False
 	def udp_hole(self, data, connection):
 		try:
@@ -350,14 +358,14 @@ class Request(object):
 			session = Session.objects.get(id=session_id)
 		except:			
 			return self.response.false("Session Not Accept")
-		if self._check_session(session_id):
+		if self._check_udp_session(session_id):
 			port = self.session[session_id]
-			del self.session[session_id]
+			del self.udp_hole_sock[session_id]
 			return self.response.udp_hole(port)
 		else:
 			udp = JsonSocket(JsonSocket.UDP)
 			port = udp.set_server(0)
-			self.session[session_id] = port
+			self.udp_hole_sock[session_id] = port
 			thread.start_new_thread(self.udp_connect, (session_id, udp))
 			return self.response.udp_hole(port)
 

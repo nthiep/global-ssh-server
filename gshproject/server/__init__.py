@@ -1,6 +1,6 @@
 from mainserver import SocketServer
-import logging
-
+import sys, logging
+from .config import LOG_FILENAME
 # Make a class we can use to capture stdout and sterr in the log
 class MyLogger(object):
 	def __init__(self, logger, level):
@@ -12,9 +12,6 @@ class MyLogger(object):
 		# Only log if there is a message (not just a new line)
 		if message.rstrip() != "":
 			self.logger.log(self.level, message.rstrip())
-
-
-"""
 logger = logging.getLogger(__name__)
 # Set the log level to LOG_LEVEL
 LOG_LEVEL = logging.INFO 
@@ -33,7 +30,6 @@ sys.stdout = MyLogger(logger, logging.INFO)
 # Replace stderr with logging to file at ERROR level
 sys.stderr = MyLogger(logger, logging.ERROR)
 # run main script
-"""
 try:
 	socketServer = SocketServer()
 	socketServer.start()

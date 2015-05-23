@@ -9,4 +9,4 @@ SERVER_TIMEOUT 	= 30
 AFTER_IDLE		= 1 
 INTERVAL	    = 3
 MAX_FAILS 		= 5
-LOG_FILENAME 	= "/var/log/gshs.log"
+LOG_FILENAME 	= "/root/log/gosh_server.log"
