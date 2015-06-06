@@ -150,7 +150,7 @@ class Request(object):
 			del self.session[session.id]
 		except:
 			pass
-		return self.response.false("Peer Not Response")
+		return False
 	def connect(self, data, connection):
 		""" request connect to other machine """
 		print data
@@ -342,7 +342,7 @@ class Request(object):
 			thread.start_new_thread(self._relay_forward, (session_id, conna, connb))			
 			thread.start_new_thread(self._relay_forward, (session_id, connb, conna))
 			relay_session, created = RelaySession.objects.get_or_create(session=session, \
-						sock_a = "%s:%d"%conna.getpeername(), sock_b="%s:%d"%connb.getpeername)
+						sock_a = "%s:%d"%conna.getpeername(), sock_b="%s:%d"%connb.getpeername())
 			del self.relay_sock[session_id]
 			print "Start Thread Relay %s" %session_id
 		else:
